@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="@__qml_plugin_qrc_prefix@">
+@__qml_plugin_qrc_content@
+    </qresource>
+</RCC>
