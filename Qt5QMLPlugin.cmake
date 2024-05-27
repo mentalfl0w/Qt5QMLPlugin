@@ -13,6 +13,14 @@ function(FindQtInstallQml)
     set(QT_QML_INSTALL_DIR ${QT_ROOT_DIR}qml PARENT_SCOPE)
 endfunction()
 
+function(qt_add_executable)
+    qt5_add_executable(${ARGV})
+endfunction()
+
+function(qt5_add_executable)
+    add_executable(${ARGV})
+endfunction()
+
 function(qt_add_library)
     qt5_add_library(${ARGV})
 endfunction()
