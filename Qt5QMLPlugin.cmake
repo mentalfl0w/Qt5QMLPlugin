@@ -84,7 +84,7 @@ function(qt5_add_qml_module TARGET)
     endif()
 
     if(NOT QMLPLUGIN_RESOURCE_PREFIX)
-        set(QMLPLUGIN_RESOURCE_PREFIX "/qt/qml/")
+        set(QMLPLUGIN_RESOURCE_PREFIX "/qt-project.org/imports/")
     endif()
     set(__qml_plugin_qrc_prefix "")
     if (${QMLPLUGIN_RESOURCE_PREFIX} MATCHES "/$")
