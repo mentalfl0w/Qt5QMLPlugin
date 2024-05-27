@@ -70,7 +70,9 @@ function(qt5_add_qml_module TARGET)
         set(QMLPLUGIN_NO_GENERATE_TYPEINFO OFF)
     endif()
 
+    ### Set target output directory
     set_target_properties(${TARGET} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         LIBRARY_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         ARCHIVE_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         AUTOMOC_MOC_OPTIONS "--output-json")
@@ -93,9 +95,6 @@ function(qt5_add_qml_module TARGET)
         string(APPEND __qml_plugin_qrc_prefix ${QMLPLUGIN_RESOURCE_PREFIX}/${__qml_plugin_uri_dir})
     endif()
 
-    ### Set target output directory
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY})
-
     ### Append sources files to target
     target_sources(${TARGET} PUBLIC ${QMLPLUGIN_QML_FILES} ${QMLPLUGIN_SOURCES})
 
@@ -114,7 +113,6 @@ function(qt5_add_qml_module TARGET)
     ### Generate qmldir
     if(QMLPLUGIN_QML_FILES)
         set(__qml_plugin_qmldir_content "")
-        set(__qml_plugin_qml_file_register "#ifdef ${__qml_plugin_uri_name_upper}_BUILD_STATIC_LIB\n        //@uri ${__qml_plugin_uri_name}\n")
         string(APPEND __qml_plugin_qmldir_content "module ${__qml_plugin_uri_name}\n")
         if (__target_type MATCHES "SHARED_LIBRARY")
             if(NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
@@ -145,9 +143,7 @@ function(qt5_add_qml_module TARGET)
             else()
                 string(APPEND __qml_plugin_qmldir_content "singleton ${__qmlfile_name} ${QMLPLUGIN_VERSION_MAJOR}.0 ${__qmlfile_path}\n")
             endif()
-            string(APPEND __qml_plugin_qml_file_register "        qmlRegisterType(QUrl(\"qrc:${__qml_plugin_qrc_prefix}/${__qmlfile_path}\"), \"${__qml_plugin_uri_name}\", ${QMLPLUGIN_VERSION_MAJOR}, 0, \"${__qmlfile_name}\");\n")
         endforeach()
-        string(APPEND __qml_plugin_qml_file_register "#endif\n")
         configure_file(${__qml_plugin_current_dir}/qmldir.in ${QMLPLUGIN_OUTPUT_DIRECTORY}/qmldir @ONLY)
         if(QMLPLUGIN_DEPEND_MODULE AND __target_type MATCHES "SHARED_LIBRARY" AND NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
             set(__qml_plugin_qmldir_content "")
@@ -214,7 +210,7 @@ function(qt5_add_qml_module TARGET)
 
 
     ### Generate ${TARGET}Plugin class
-    if (__target_type MATCHES "LIBRARY")
+    if (__target_type MATCHES "SHARED_LIBRARY")
         configure_file(${__qml_plugin_current_dir}/projectplugin.h.in ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}plugin.h @ONLY)
         target_sources(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}plugin.h)
     endif()
