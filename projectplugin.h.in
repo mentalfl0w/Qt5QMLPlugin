@@ -5,15 +5,15 @@
 #include "@__qml_plugin_uri_name_lower@.h"
 
 #ifdef @__qml_plugin_uri_name_upper@_BUILD_STATIC_LIB
-class @__qml_plugin_uri_name@Plugin : public QObject
+class @__qml_plugin_uri_name_fix@Plugin : public QObject
 #else
-class @__qml_plugin_uri_name@Plugin : public QQmlExtensionPlugin
+class @__qml_plugin_uri_name_fix@Plugin : public QQmlExtensionPlugin
 #endif
 {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID QQmlExtensionInterface_iid)
 public:
-    explicit @__qml_plugin_uri_name@Plugin(QObject *parent = nullptr){};
+    explicit @__qml_plugin_uri_name_fix@Plugin(QObject *parent = nullptr){};
 #ifdef @__qml_plugin_uri_name_upper@_BUILD_STATIC_LIB
     static void registerTypes(const char *uri) 
 #else
@@ -21,7 +21,7 @@ public:
 #endif
     {
         Q_ASSERT(uri == QLatin1String("@__qml_plugin_uri_name@"));
-@__qml_plugin_qml_file_register@        @__qml_plugin_uri_name@::instance()->registerTypes(uri);
+@__qml_plugin_qml_file_register@        @__qml_plugin_uri_name_fix@::instance()->registerTypes(uri);
     }
 #ifdef @__qml_plugin_uri_name_upper@_BUILD_STATIC_LIB
     static void initializeEngine(QQmlEngine *engine, const char *uri)
@@ -29,7 +29,7 @@ public:
     void initializeEngine(QQmlEngine *engine, const char *uri) Q_DECL_OVERRIDE
 #endif
     {
-        @__qml_plugin_uri_name@::instance()->initializeEngine(engine,uri);
+        @__qml_plugin_uri_name_fix@::instance()->initializeEngine(engine,uri);
     }
 };
 
