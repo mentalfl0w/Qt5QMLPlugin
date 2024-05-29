@@ -1,11 +1,17 @@
 include(CMakeParseArguments)
 set(__qml_plugin_current_dir ${CMAKE_CURRENT_LIST_DIR})
 option(__qml_plugin_no_generate_typeinfo OFF)
+option(__qml_plugin_no_public_sources OFF)
 find_package(Qt5 REQUIRED COMPONENTS Core)
 ### Finds where to qmlplugindump binary is installed
 function(FindQmlPluginDump)
     cmake_path(SET QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
     set(QMLPLUGINDUMP_BIN ${QT_BIN_DIR}/qmlplugindump PARENT_SCOPE)
+endfunction()
+
+function(FindQmlTypeRegistrar)
+    cmake_path(SET QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
+    set(QMLTYPEREGISTRAR_BIN ${QT_BIN_DIR}/qmltyperegistrar PARENT_SCOPE)
 endfunction()
 
 ### Sets QT_QML_INSTALL_DIR to the directory where QML Plugins should be installed
@@ -35,7 +41,7 @@ function(qt_add_qml_module)
 endfunction()
 
 function(qt5_add_qml_module TARGET)
-    set(options NO_GENERATE_TYPEINFO)
+    set(options NO_GENERATE_TYPEINFO NO_PUBLIC_SOURCES)
     set(oneValueArgs URI VERSION PLUGIN_TARGET OUTPUT_DIRECTORY RESOURCE_PREFIX TYPEINFO)
     set(multiValueArgs SOURCES QML_FILES RESOURCES DEPEND_MODULE)
     cmake_parse_arguments(QMLPLUGIN "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -64,6 +70,12 @@ function(qt5_add_qml_module TARGET)
         set(QMLPLUGIN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_dir})
     endif()
 
+    if(QMLPLUGIN_NO_PUBLIC_SOURCES OR __qml_plugin_no_public_sources)
+        set(__qml_plugin_sources_flag PRIVATE)
+    else()
+        set(__qml_plugin_sources_flag PUBLIC)
+    endif()
+
     if(QMLPLUGIN_NO_GENERATE_TYPEINFO OR __qml_plugin_no_generate_typeinfo)
         set(QMLPLUGIN_NO_GENERATE_TYPEINFO ON)
     else()
@@ -75,7 +87,8 @@ function(qt5_add_qml_module TARGET)
         RUNTIME_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         LIBRARY_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         ARCHIVE_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
-        AUTOMOC_MOC_OPTIONS "--output-json")
+        AUTOMOC_MOC_OPTIONS "--output-json;--output-dep-file")
+    cmake_path(SET QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
 
     if(NOT QMLPLUGIN_PLUGIN_TARGET)
         set(QMLPLUGIN_PLUGIN_TARGET "${__qml_plugin_uri_name_fix}plugin")
@@ -95,15 +108,56 @@ function(qt5_add_qml_module TARGET)
         string(APPEND __qml_plugin_qrc_prefix ${QMLPLUGIN_RESOURCE_PREFIX}/${__qml_plugin_uri_dir})
     endif()
 
-    ### Append sources files to target
-    target_sources(${TARGET} PUBLIC ${QMLPLUGIN_QML_FILES} ${QMLPLUGIN_SOURCES})
-
-    get_target_property(__target_type ${TARGET} TYPE)
-
     ### Find location of qmlplugindump (stored in QMLPLUGINDUMP_BIN)
     FindQmlPluginDump()
     ### Find where to install QML Plugins (stored in QT_QML_INSTALL_DIR)
     FindQtInstallQml()
+    FindQmlTypeRegistrar()
+
+    ### Append sources files to target
+    add_executable(AutoMocHelper ${__qml_plugin_current_dir}/automoc_helper.cpp)
+    target_link_libraries(AutoMocHelper Qt5::Core)
+    add_dependencies(${TARGET} AutoMocHelper)
+    set_target_properties(${TARGET} PROPERTIES AUTOGEN_TARGET_DEPENDS AutoMocHelper)
+    get_target_property(__qml_plugin_build_dir ${TARGET} AUTOGEN_BUILD_DIR)
+    if(${__qml_plugin_build_dir} MATCHES "NOTFOUND")
+        set(__qml_plugin_build_dir "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_autogen")
+    endif()
+
+    message("${__qml_plugin_build_dir}")
+
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
+        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir} > ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir}/timestamp
+        COMMAND_EXPAND_LISTS
+        VERBATIM)
+
+    add_custom_target(automoc_json_list_generate ALL
+        DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt)
+
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
+        COMMAND ${QT_BIN_DIR}/moc --collect-json  "@${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt" > ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
+        COMMAND_EXPAND_LISTS
+        VERBATIM)
+    add_custom_target(automoc_collect_json_generate ALL
+        DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
+
+
+    set(__qml_plugin_automoc_type_register_cpp "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp")
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp
+        COMMAND ${QMLTYPEREGISTRAR_BIN} --import-name ${__qml_plugin_uri_name} --major-version ${QMLPLUGIN_VERSION_MAJOR} --minor-version 0 ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json --generate-qmltypes ${CMAKE_CURRENT_BINARY_DIR}/${QMLPLUGIN_TYPEINFO} > ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
+
+    add_custom_target(automoc_type_register_generate ALL
+        DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp)
+
+    add_dependencies(${TARGET} automoc_type_register_generate)
+
+    target_sources(${TARGET} ${__qml_plugin_sources_flag} ${QMLPLUGIN_SOURCES} ${QMLPLUGIN_QML_FILES})
+    target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
+    set_source_files_properties(${__qml_plugin_automoc_type_register_cpp} PROPERTIES SKIP_AUTOMOC ON)
+    get_target_property(__target_type ${TARGET} TYPE)
 
     if (__target_type MATCHES "STATIC_LIBRARY")
         target_compile_definitions(${TARGET} PUBLIC
@@ -186,7 +240,7 @@ function(qt5_add_qml_module TARGET)
             string(APPEND __qml_plugin_qrc_content "        <file>${__rscfile_path}</file>\n")
         endforeach()
         configure_file(${__qml_plugin_current_dir}/project.qrc.in ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__qml_plugin_uri_name_lower}.qrc @ONLY)
-        target_sources(${TARGET} PUBLIC ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__qml_plugin_uri_name_lower}.qrc)
+        target_sources(${TARGET} ${__qml_plugin_sources_flag} ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__qml_plugin_uri_name_lower}.qrc)
     endif()
 
     ### Generate qmltypes
@@ -211,7 +265,7 @@ function(qt5_add_qml_module TARGET)
 
     ### Generate ${TARGET}Plugin class
     if (__target_type MATCHES "SHARED_LIBRARY")
-        configure_file(${__qml_plugin_current_dir}/projectplugin.h.in ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}plugin.h @ONLY)
-        target_sources(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}plugin.h)
+        configure_file(${__qml_plugin_current_dir}/project_URIPlugin.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name}Plugin.cpp @ONLY)
+        target_sources(${TARGET} ${__qml_plugin_sources_flag} ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name}Plugin.cpp)
     endif()
 endfunction()
