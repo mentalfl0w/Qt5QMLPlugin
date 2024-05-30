@@ -8,7 +8,8 @@ There is no other work need to be done, just use it!
 1. The naming and functionality is basically the same as Qt's own qt_add_qml_module, which means that very little needs to be modified(can be use like `qt_add_qml_module` or `qt5_add_qml_module`).
 2. All resource files, including qml files, will be automatically copied to the directory after modification without manual operation.
 3. All plugin-related files (qmldir, qml extension plugin's source code, qrc file, etc.) will be automatically generated in the build directory, no need to write them manually and without polluting the code repository (just like Qt6😉).
-4. Provide `qt_add_library` and `qt5_add_library` functions for easy code migration.
+4. Provide `qt_add_library`,`qt5_add_library`,`qt_add_executable`,`qt5_add_executable` functions for easy code migration.
+5. Support parse `QML_ELEMENT`, `QML_NAMED_ELEMENT`,`QML_SINGLETON` macros.
 
 ## Usage
 
@@ -30,6 +31,7 @@ qt_add_qml_module(<TARGET>
     DEPEND_MODULE
         [dependModule1 dependModule2]
     NO_GENERATE_TYPEINFO <ON or OFF>
+    NO_PUBLIC_SOURCES <ON or OFF>
 )
 ```
 #### Explanation
@@ -45,7 +47,28 @@ qt_add_qml_module(<TARGET>
 | `PLUGIN_TARGET` | Default is the lowercase URI. Change it if you like. |
 | `OUTPUT_DIRECTORY` | Default is ${CMAKE_CURRENT_BINARY_DIR}/org/mycompany/components. Change it if you like. |
 | `TYPEINFO` | Default name is the URI without `.`, like `orgmycompanycomponents.qmltypes`. Change it if you like. |
-| `NO_GENERATE_TYPEINFO` | Turn off typeinfo file auto generation. Default is OFF. |
+| `NO_GENERATE_TYPEINFO` | Turn off typeinfo file auto generation. Default is OFF. If you want to keep `qt_add_qml_module` usable for both Qt5 and Qt6, you can set the `__qml_plugin_no_generate_typeinfo` to control it before use `Qt5QMLPlugin`.|
+| `NO_PUBLIC_SOURCES` | Let source files only visible for ${TARGET}. Default is ON. If you want to keep `qt_add_qml_module` usable for both Qt5 and Qt6, you can set the `__qml_plugin_no_public_sources` to control it before use `Qt5QMLPlugin`.|
+
+##### ***If you want to make a static plugin, don't forget to add this code below to your project:***
+```cpp
+// Add below code before your main() function
+#ifdef YOUR_UPPER_CASE_URI_BUILD_STATIC_LIB
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) // Add this check if you want to support both Qt 5 and Qt 6
+#define Q_IMPORT_QML_PLUGIN(PLUGIN) \
+Q_IMPORT_PLUGIN(PLUGIN)
+extern void qml_static_register_types_YOUR_UPPER_CASE_URI();
+#endif
+Q_IMPORT_QML_PLUGIN(YOUR_UPPER_CASE_URIPlugin)
+#endif
+
+// Add below code before engine.load()
+#ifdef YOUR_UPPER_CASE_URI_BUILD_STATIC_LIB
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) // Add this check if you want to support both Qt 5 and Qt 6
+    qml_static_register_types_YOUR_UPPER_CASE_URI();
+#endif
+#endif
+```
 
 ### Example
 ```cmake

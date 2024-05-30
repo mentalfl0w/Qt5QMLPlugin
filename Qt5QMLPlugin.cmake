@@ -1,7 +1,7 @@
 include(CMakeParseArguments)
 set(__qml_plugin_current_dir ${CMAKE_CURRENT_LIST_DIR})
 option(__qml_plugin_no_generate_typeinfo OFF)
-option(__qml_plugin_no_public_sources OFF)
+option(__qml_plugin_no_public_sources ON)
 find_package(Qt5 REQUIRED COMPONENTS Core)
 ### Finds where to qmlplugindump binary is installed
 function(FindQmlPluginDump)
@@ -71,8 +71,10 @@ function(qt5_add_qml_module TARGET)
     endif()
 
     if(QMLPLUGIN_NO_PUBLIC_SOURCES OR __qml_plugin_no_public_sources)
+        set(QMLPLUGIN_NO_PUBLIC_SOURCES ON)
         set(__qml_plugin_sources_flag PRIVATE)
     else()
+        set(QMLPLUGIN_NO_PUBLIC_SOURCES OFF)
         set(__qml_plugin_sources_flag PUBLIC)
     endif()
 
