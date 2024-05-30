@@ -152,8 +152,6 @@ function(qt5_add_qml_module TARGET)
     add_custom_target(automoc_type_register_generate ALL
         DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp)
 
-    add_dependencies(${TARGET} automoc_type_register_generate)
-
     target_sources(${TARGET} ${__qml_plugin_sources_flag} ${QMLPLUGIN_SOURCES} ${QMLPLUGIN_QML_FILES})
     target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
     set_source_files_properties(${__qml_plugin_automoc_type_register_cpp} PROPERTIES SKIP_AUTOMOC ON)
