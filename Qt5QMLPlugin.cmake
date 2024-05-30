@@ -87,7 +87,7 @@ function(qt5_add_qml_module TARGET)
         RUNTIME_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         LIBRARY_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         ARCHIVE_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
-        AUTOMOC_MOC_OPTIONS "--output-json;--output-dep-file")
+        AUTOMOC_MOC_OPTIONS "--output-json;--output-dep-file;-Muri=${__qml_plugin_uri_name_fix}")
     cmake_path(SET QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
 
     if(NOT QMLPLUGIN_PLUGIN_TARGET)
@@ -167,15 +167,20 @@ function(qt5_add_qml_module TARGET)
     ### Generate qmldir
     if(QMLPLUGIN_QML_FILES)
         set(__qml_plugin_qmldir_content "")
+        if (__target_type MATCHES "STATIC_LIBRARY")
+            set(__qml_plugin_static_register_content "void qml_static_register_types_${__qml_plugin_uri_name}(){\n    Q_INIT_RESOURCE(${__qml_plugin_uri_name_lower});\n")
+        endif()
         string(APPEND __qml_plugin_qmldir_content "module ${__qml_plugin_uri_name}\n")
-        if (__target_type MATCHES "SHARED_LIBRARY")
-            if(NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
-                add_custom_target(ForceConfiguration ALL
-                    DEPENDS ${TARGET}
-                    COMMAND ${CMAKE_COMMAND} -H${CMAKE_SOURCE_DIR} -B${CMAKE_BINARY_DIR})
+        if (__target_type MATCHES "LIBRARY")
+            if (__target_type MATCHES "SHARED_LIBRARY")
+                if(NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
+                    add_custom_target(ForceConfiguration ALL
+                        DEPENDS ${TARGET}
+                        COMMAND ${CMAKE_COMMAND} -H${CMAKE_SOURCE_DIR} -B${CMAKE_BINARY_DIR})
+                endif()
+                string(APPEND __qml_plugin_qmldir_content "plugin ${QMLPLUGIN_PLUGIN_TARGET}\n")
             endif()
             string(APPEND __qml_plugin_qmldir_content "linktarget ${QMLPLUGIN_PLUGIN_TARGET}\n")
-            string(APPEND __qml_plugin_qmldir_content "plugin ${QMLPLUGIN_PLUGIN_TARGET}\n")
             string(APPEND __qml_plugin_qmldir_content "classname ${__qml_plugin_uri_name_fix}Plugin\n")
         endif()
         string(APPEND __qml_plugin_qmldir_content "typeinfo ${QMLPLUGIN_TYPEINFO}\n")
@@ -194,10 +199,22 @@ function(qt5_add_qml_module TARGET)
             string(REPLACE ${__qmlfile_full_name} "" __qmlfile_relative_dir ${__qmlfile_path})
             if(${__qmlfile_is_singleton} STREQUAL "NOTFOUND" OR NOT __qmlfile_is_singleton)
                 string(APPEND __qml_plugin_qmldir_content "${__qmlfile_name} ${QMLPLUGIN_VERSION_MAJOR}.0 ${__qmlfile_path}\n")
+                if (__target_type MATCHES "STATIC_LIBRARY")
+                    string(APPEND __qml_plugin_static_register_content "    qmlRegisterType(")
+                endif()
             else()
                 string(APPEND __qml_plugin_qmldir_content "singleton ${__qmlfile_name} ${QMLPLUGIN_VERSION_MAJOR}.0 ${__qmlfile_path}\n")
+                if (__target_type MATCHES "STATIC_LIBRARY")
+                    string(APPEND __qml_plugin_static_register_content "    qmlRegisterSingletonType(")
+                endif()
+            endif()
+            if (__target_type MATCHES "STATIC_LIBRARY")
+                string(APPEND __qml_plugin_static_register_content "QUrl(\"qrc:${__qml_plugin_qrc_prefix}/${__qmlfile_path}\"),\"${__qml_plugin_uri_name}\",${QMLPLUGIN_VERSION_MAJOR},0,\"${__qmlfile_name}\");\n")
             endif()
         endforeach()
+        if (__target_type MATCHES "STATIC_LIBRARY")
+            string(APPEND __qml_plugin_static_register_content "    qml_register_types_${__qml_plugin_uri_name}();\n}\n")
+        endif()
         configure_file(${__qml_plugin_current_dir}/qmldir.in ${QMLPLUGIN_OUTPUT_DIRECTORY}/qmldir @ONLY)
         if(QMLPLUGIN_DEPEND_MODULE AND __target_type MATCHES "SHARED_LIBRARY" AND NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
             set(__qml_plugin_qmldir_content "")
@@ -264,8 +281,18 @@ function(qt5_add_qml_module TARGET)
 
 
     ### Generate ${TARGET}Plugin class
-    if (__target_type MATCHES "SHARED_LIBRARY")
+    if (__target_type MATCHES "LIBRARY")
+        if (__target_type MATCHES "STATIC_LIBRARY")
+            configure_file(${__qml_plugin_current_dir}/URIplugin_init.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name}plugin_init.cpp @ONLY)
+            target_sources(${TARGET} ${__qml_plugin_sources_flag}
+                "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name}plugin_init.cpp")
+            target_compile_definitions(${TARGET}
+                PUBLIC
+                QT_STATICPLUGIN
+            )
+        endif()
         configure_file(${__qml_plugin_current_dir}/project_URIPlugin.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name}Plugin.cpp @ONLY)
-        target_sources(${TARGET} ${__qml_plugin_sources_flag} ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name}Plugin.cpp)
+        target_sources(${TARGET} ${__qml_plugin_sources_flag}
+            "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name}Plugin.cpp")
     endif()
 endfunction()
