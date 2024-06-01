@@ -65,6 +65,8 @@ function(qt5_add_qml_module TARGET)
     string(TOLOWER ${TARGET} __qml_plugin_target_name_lower)
     string(TOUPPER ${TARGET} __qml_plugin_target_name_upper)
 
+    get_target_property(__target_type ${TARGET} TYPE)
+
     ### Depending on project hierarchy, one might want to specify a custom binary dir
     if(NOT QMLPLUGIN_OUTPUT_DIRECTORY)
         set(QMLPLUGIN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_dir})
@@ -117,47 +119,45 @@ function(qt5_add_qml_module TARGET)
     FindQmlTypeRegistrar()
 
     ### Append sources files to target
-    add_executable(AutoMocHelper ${__qml_plugin_current_dir}/automoc_helper.cpp)
-    target_link_libraries(AutoMocHelper Qt5::Core)
-    add_dependencies(${TARGET} AutoMocHelper)
-    set_target_properties(${TARGET} PROPERTIES AUTOGEN_TARGET_DEPENDS AutoMocHelper)
-    get_target_property(__qml_plugin_build_dir ${TARGET} AUTOGEN_BUILD_DIR)
-    if(${__qml_plugin_build_dir} MATCHES "NOTFOUND")
-        set(__qml_plugin_build_dir "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_autogen")
-    endif()
-
-    message("${__qml_plugin_build_dir}")
-
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir} > ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir}/timestamp
-        COMMAND_EXPAND_LISTS
-        VERBATIM)
-
-    add_custom_target(automoc_json_list_generate ALL
-        DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt)
-
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
-        COMMAND ${QT_BIN_DIR}/moc --collect-json  "@${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt" > ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
-        COMMAND_EXPAND_LISTS
-        VERBATIM)
-    add_custom_target(automoc_collect_json_generate ALL
-        DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
-
-
-    set(__qml_plugin_automoc_type_register_cpp "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp")
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp
-        COMMAND ${QMLTYPEREGISTRAR_BIN} --import-name ${__qml_plugin_uri_name} --major-version ${QMLPLUGIN_VERSION_MAJOR} --minor-version 0 ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json --generate-qmltypes ${CMAKE_CURRENT_BINARY_DIR}/${QMLPLUGIN_TYPEINFO} > ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
-
-    add_custom_target(automoc_type_register_generate ALL
-        DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp)
-
     target_sources(${TARGET} ${__qml_plugin_sources_flag} ${QMLPLUGIN_SOURCES} ${QMLPLUGIN_QML_FILES})
-    target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
-    set_source_files_properties(${__qml_plugin_automoc_type_register_cpp} PROPERTIES SKIP_AUTOMOC ON)
-    get_target_property(__target_type ${TARGET} TYPE)
+    if (__target_type MATCHES "LIBRARY")
+        add_executable(${__qml_plugin_uri_name_lower}-AutoMocHelper ${__qml_plugin_current_dir}/automoc_helper.cpp)
+        set_target_properties(${__qml_plugin_uri_name_lower}-AutoMocHelper PROPERTIES OUTPUT_NAME "AutoMocHelper")
+        target_link_libraries(${__qml_plugin_uri_name_lower}-AutoMocHelper Qt5::Core)
+        add_dependencies(${TARGET} ${__qml_plugin_uri_name_lower}-AutoMocHelper)
+        set_target_properties(${TARGET} PROPERTIES AUTOGEN_TARGET_DEPENDS ${__qml_plugin_uri_name_lower}-AutoMocHelper)
+        get_target_property(__qml_plugin_build_dir ${TARGET} AUTOGEN_BUILD_DIR)
+        if(${__qml_plugin_build_dir} MATCHES "NOTFOUND")
+            set(__qml_plugin_build_dir "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_autogen")
+        endif()
+        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir} > ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir}/timestamp
+            COMMAND_EXPAND_LISTS
+            VERBATIM)
+
+        add_custom_target(${__qml_plugin_uri_name_lower}-automoc_json_list_generate ALL
+            DEPENDS ${__qml_plugin_uri_name_lower}-AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt)
+
+        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
+            COMMAND ${QT_BIN_DIR}/moc --collect-json  "@${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt" > ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
+            COMMAND_EXPAND_LISTS
+            VERBATIM)
+        add_custom_target(${__qml_plugin_uri_name_lower}-automoc_collect_json_generate ALL
+            DEPENDS ${__qml_plugin_uri_name_lower}-AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
+
+
+        set(__qml_plugin_automoc_type_register_cpp ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_lower}_qmltyperegistrations.cpp)
+        add_custom_command(OUTPUT ${__qml_plugin_automoc_type_register_cpp}
+            COMMAND ${QMLTYPEREGISTRAR_BIN} --import-name ${__qml_plugin_uri_name} --major-version ${QMLPLUGIN_VERSION_MAJOR} --minor-version 0 ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json --generate-qmltypes ${CMAKE_CURRENT_BINARY_DIR}/${QMLPLUGIN_TYPEINFO} > ${__qml_plugin_automoc_type_register_cpp}
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
+
+        add_custom_target(${__qml_plugin_uri_name_lower}-automoc_type_register_generate ALL
+            DEPENDS ${__qml_plugin_uri_name_lower}-AutoMocHelper ${__qml_plugin_automoc_type_register_cpp})
+        target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
+        set_source_files_properties(${__qml_plugin_automoc_type_register_cpp} PROPERTIES SKIP_AUTOGEN ON)
+    endif()
 
     if (__target_type MATCHES "STATIC_LIBRARY")
         target_compile_definitions(${TARGET} PUBLIC
