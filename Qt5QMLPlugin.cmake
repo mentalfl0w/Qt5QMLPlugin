@@ -132,7 +132,7 @@ function(qt5_add_qml_module TARGET)
         endif()
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir} > ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
-            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir}/timestamp
+            DEPENDS ${__qml_plugin_uri_name_lower}-AutoMocHelper ${__qml_plugin_build_dir}/timestamp
             COMMAND_EXPAND_LISTS
             VERBATIM)
 
