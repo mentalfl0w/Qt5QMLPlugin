@@ -80,7 +80,7 @@ function(qt5_add_qml_module TARGET)
         set(__qml_plugin_sources_flag PUBLIC)
     endif()
 
-    if(QMLPLUGIN_NO_GENERATE_TYPEINFO OR __qml_plugin_no_generate_typeinfo)
+    if(QMLPLUGIN_NO_GENERATE_TYPEINFO OR __qml_plugin_no_generate_typeinfo OR CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(QMLPLUGIN_NO_GENERATE_TYPEINFO ON)
     else()
         set(QMLPLUGIN_NO_GENERATE_TYPEINFO OFF)
@@ -91,7 +91,7 @@ function(qt5_add_qml_module TARGET)
         RUNTIME_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         LIBRARY_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         ARCHIVE_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
-        AUTOMOC_MOC_OPTIONS "--output-json;--output-dep-file;-Muri=${__qml_plugin_uri_name_fix}")
+        AUTOMOC_MOC_OPTIONS "--output-json;--output-dep-file")
     cmake_path(SET QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
 
     if(NOT QMLPLUGIN_PLUGIN_TARGET)
@@ -105,6 +105,11 @@ function(qt5_add_qml_module TARGET)
     if(NOT QMLPLUGIN_RESOURCE_PREFIX)
         set(QMLPLUGIN_RESOURCE_PREFIX "/qt-project.org/imports/")
     endif()
+
+    if(NOT DEFINED QMLPLUGIN_DEPEND_MODULE AND __qml_plugin_depend_module)
+        set(QMLPLUGIN_DEPEND_MODULE ${__qml_plugin_depend_module})
+    endif()
+
     set(__qml_plugin_qrc_prefix "")
     if (${QMLPLUGIN_RESOURCE_PREFIX} MATCHES "/$")
         string(APPEND __qml_plugin_qrc_prefix ${QMLPLUGIN_RESOURCE_PREFIX}${__qml_plugin_uri_dir})
@@ -123,7 +128,6 @@ function(qt5_add_qml_module TARGET)
     if (__target_type MATCHES "LIBRARY")
         add_executable(${__qml_plugin_uri_name_lower}-AutoMocHelper ${__qml_plugin_current_dir}/automoc_helper.cpp)
         set_target_properties(${__qml_plugin_uri_name_lower}-AutoMocHelper PROPERTIES OUTPUT_NAME "AutoMocHelper")
-        target_link_libraries(${__qml_plugin_uri_name_lower}-AutoMocHelper Qt5::Core)
         add_dependencies(${TARGET} ${__qml_plugin_uri_name_lower}-AutoMocHelper)
         set_target_properties(${TARGET} PROPERTIES AUTOGEN_TARGET_DEPENDS ${__qml_plugin_uri_name_lower}-AutoMocHelper)
         get_target_property(__qml_plugin_build_dir ${TARGET} AUTOGEN_BUILD_DIR)
@@ -155,7 +159,11 @@ function(qt5_add_qml_module TARGET)
 
         add_custom_target(${__qml_plugin_uri_name_lower}-automoc_type_register_generate ALL
             DEPENDS ${__qml_plugin_uri_name_lower}-AutoMocHelper ${__qml_plugin_automoc_type_register_cpp})
-        target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
+        if (__target_type MATCHES "STATIC_LIBRARY")
+            target_sources(${TARGET} PUBLIC ${__qml_plugin_automoc_type_register_cpp})
+        else()
+            target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
+        endif()
         set_source_files_properties(${__qml_plugin_automoc_type_register_cpp} PROPERTIES SKIP_AUTOGEN ON)
     endif()
 
@@ -173,11 +181,6 @@ function(qt5_add_qml_module TARGET)
         string(APPEND __qml_plugin_qmldir_content "module ${__qml_plugin_uri_name}\n")
         if (__target_type MATCHES "LIBRARY")
             if (__target_type MATCHES "SHARED_LIBRARY")
-                if(NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
-                    add_custom_target(ForceConfiguration ALL
-                        DEPENDS ${TARGET}
-                        COMMAND ${CMAKE_COMMAND} -H${CMAKE_SOURCE_DIR} -B${CMAKE_BINARY_DIR})
-                endif()
                 string(APPEND __qml_plugin_qmldir_content "plugin ${QMLPLUGIN_PLUGIN_TARGET}\n")
             endif()
             string(APPEND __qml_plugin_qmldir_content "linktarget ${QMLPLUGIN_PLUGIN_TARGET}\n")
@@ -222,12 +225,12 @@ function(qt5_add_qml_module TARGET)
                 string(APPEND __qml_plugin_qmldir_content "module ${depends}\n")
                 string(APPEND __qml_plugin_qmldir_content "typeinfo ${depends}.qmltypes\n")
                 string(APPEND __qml_plugin_qmldir_content "${depends} 1.0 ${depends}.qml\n")
-                configure_file(${__qml_plugin_current_dir}/qmldir.in ${QMLPLUGIN_OUTPUT_DIRECTORY}/${depends}/qmldir @ONLY)
-                configure_file(${__qml_plugin_current_dir}/projectdepends.qml.in ${QMLPLUGIN_OUTPUT_DIRECTORY}/${depends}/${depends}.qml)
+                configure_file(${__qml_plugin_current_dir}/qmldir.in ${QT_QML_INSTALL_DIR}/${depends}/qmldir @ONLY)
+                configure_file(${__qml_plugin_current_dir}/projectdepends.qml.in ${QT_QML_INSTALL_DIR}/${depends}/${depends}.qml)
                 add_custom_target(${depends}qmltypes ALL
-                    DEPENDS ForceConfiguration
-                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} 1.0 ${QMLPLUGIN_OUTPUT_DIRECTORY} > ${QMLPLUGIN_OUTPUT_DIRECTORY}/${depends}/${depends}.qmltypes
-                    COMMENT "Generating ${depends}.qmltypes")
+                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} 1.0 ${QT_QML_INSTALL_DIR} > ${QT_QML_INSTALL_DIR}/${depends}/${depends}.qmltypes
+                    COMMENT "Generating ${depends}.qmltypes"
+                    DEPENDS ${TARGET})
             endforeach()
         endif()
     endif()
@@ -271,12 +274,6 @@ function(qt5_add_qml_module TARGET)
             DEPENDS ${__qmltypes_depend}
             COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${QMLPLUGIN_URI} ${QMLPLUGIN_VERSION_MAJOR}.0 ${QMLPLUGIN_OUTPUT_DIRECTORY}/../ > ${QMLPLUGIN_OUTPUT_DIRECTORY}/${QMLPLUGIN_TYPEINFO}
             COMMENT "Generating ${QMLPLUGIN_TYPEINFO}")
-        foreach(depends ${QMLPLUGIN_DEPEND_MODULE})
-            add_custom_target(${depends}clean ALL
-                DEPENDS ${TARGET}qmltypes
-                COMMAND ${CMAKE_COMMAND} -E remove_directory ${QMLPLUGIN_OUTPUT_DIRECTORY}/${depends}
-                COMMENT "Removing unused ${depends} directory.")
-        endforeach()
     endif()
 
 
@@ -292,7 +289,13 @@ function(qt5_add_qml_module TARGET)
             )
         endif()
         configure_file(${__qml_plugin_current_dir}/project_URIPlugin.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name}Plugin.cpp @ONLY)
-        target_sources(${TARGET} ${__qml_plugin_sources_flag}
-            "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name}Plugin.cpp")
+        if (__target_type MATCHES "STATIC_LIBRARY")
+            target_sources(${TARGET} PUBLIC
+                "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name}Plugin.cpp")
+        else()
+            target_sources(${TARGET} PRIVATE
+                "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name}Plugin.cpp")
+        endif()
+
     endif()
 endfunction()
