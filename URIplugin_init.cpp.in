@@ -1,2 +1,2 @@
 #include <QtPlugin>
-Q_IMPORT_PLUGIN(@__qml_plugin_uri_name@Plugin)
+Q_IMPORT_PLUGIN(@__qml_plugin_uri_name_for_class@Plugin)

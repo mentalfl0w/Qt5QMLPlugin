@@ -6,21 +6,21 @@
 #  define Q_GHS_KEEP_REFERENCE(S)
 #endif
 
-extern void qml_register_types_@__qml_plugin_uri_name@();
-Q_GHS_KEEP_REFERENCE(qml_register_types_@__qml_plugin_uri_name@)
+extern void qml_register_types_@__qml_plugin_uri_name_for_class@();
+Q_GHS_KEEP_REFERENCE(qml_register_types_@__qml_plugin_uri_name_for_class@)
 @__qml_plugin_static_register_content@
-class @__qml_plugin_uri_name@Plugin : public QQmlEngineExtensionPlugin
+class @__qml_plugin_uri_name_for_class@Plugin : public QQmlEngineExtensionPlugin
 {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID QQmlEngineExtensionInterface_iid)
 
 public:
-    @__qml_plugin_uri_name@Plugin(QObject *parent = nullptr) : QQmlEngineExtensionPlugin(parent)
+    @__qml_plugin_uri_name_for_class@Plugin(QObject *parent = nullptr) : QQmlEngineExtensionPlugin(parent)
     {
 #ifdef QT_STATICPLUGIN
-        volatile auto registration = &qml_static_register_types_@__qml_plugin_uri_name@;
+        volatile auto registration = &qml_static_register_types_@__qml_plugin_uri_name_for_class@;
 #else
-        volatile auto registration = &qml_register_types_@__qml_plugin_uri_name@;
+        volatile auto registration = &qml_register_types_@__qml_plugin_uri_name_for_class@;
 #endif
         Q_UNUSED(registration)
     }
@@ -28,4 +28,4 @@ public:
 
 
 
-#include "@__qml_plugin_target_name@_@__qml_plugin_uri_name@Plugin.moc"
+#include "@__qml_plugin_target_name@_@__qml_plugin_uri_name_for_class@Plugin.moc"
