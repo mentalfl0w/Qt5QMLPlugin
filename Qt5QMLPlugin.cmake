@@ -5,18 +5,30 @@ option(__qml_plugin_no_public_sources ON)
 find_package(Qt5 REQUIRED COMPONENTS Core)
 ### Finds where to qmlplugindump binary is installed
 function(FindQmlPluginDump)
-    cmake_path(SET QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
+    FindQtBinDir()
+
     set(QMLPLUGINDUMP_BIN ${QT_BIN_DIR}/qmlplugindump PARENT_SCOPE)
 endfunction()
 
+### qmake itself tells us where the bin files are stored
+function(FindQtBinDir)
+    execute_process(
+            COMMAND qmake -query QT_INSTALL_BINS
+            OUTPUT_VARIABLE QT_BIN_DIR
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+endfunction()
+
 function(FindQmlTypeRegistrar)
-    cmake_path(SET QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
+    FindQtBinDir()
+
     set(QMLTYPEREGISTRAR_BIN ${QT_BIN_DIR}/qmltyperegistrar PARENT_SCOPE)
 endfunction()
 
 ### Sets QT_QML_INSTALL_DIR to the directory where QML Plugins should be installed
 function(FindQtInstallQml)
-    cmake_path(SET QT_ROOT_DIR NORMALIZE ${Qt5_DIR}/../../../)
+    FindQtBinDir()
+
     set(QT_QML_INSTALL_DIR ${QT_ROOT_DIR}qml PARENT_SCOPE)
 endfunction()
 
@@ -92,7 +104,8 @@ function(qt5_add_qml_module TARGET)
         LIBRARY_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         ARCHIVE_OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
         AUTOMOC_MOC_OPTIONS "--output-json;--output-dep-file")
-    cmake_path(SET QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
+
+    FindQtBinDir()
 
     if(NOT QMLPLUGIN_PLUGIN_TARGET)
         set(QMLPLUGIN_PLUGIN_TARGET "${__qml_plugin_uri_name_fix}plugin")
