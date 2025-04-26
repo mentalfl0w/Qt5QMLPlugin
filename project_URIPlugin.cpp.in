@@ -6,8 +6,14 @@
 #  define Q_GHS_KEEP_REFERENCE(S)
 #endif
 
+#ifdef QT_STATICPLUGIN
+extern void qml_static_register_types_@__qml_plugin_uri_name_for_class@();
+Q_GHS_KEEP_REFERENCE(qml_static_register_types_@__qml_plugin_uri_name_for_class@)
+#else
 extern void qml_register_types_@__qml_plugin_uri_name_for_class@();
 Q_GHS_KEEP_REFERENCE(qml_register_types_@__qml_plugin_uri_name_for_class@)
+#endif
+
 @__qml_plugin_static_register_content@
 class @__qml_plugin_uri_name_for_class@Plugin : public QQmlEngineExtensionPlugin
 {
