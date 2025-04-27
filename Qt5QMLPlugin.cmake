@@ -14,9 +14,13 @@ endfunction()
 function(FindQtBinDir)
     execute_process(
             COMMAND qmake -query QT_INSTALL_BINS
-            OUTPUT_VARIABLE QT_BIN_DIR
+            OUTPUT_VARIABLE __QT_BIN_DIR
             OUTPUT_STRIP_TRAILING_WHITESPACE
     )
+    if(__QT_BIN_DIR STREQUAL "")
+        cmake_path(SET __QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
+    endif()
+    set(QT_BIN_DIR ${__QT_BIN_DIR} PARENT_SCOPE)
 endfunction()
 
 function(FindQmlTypeRegistrar)
