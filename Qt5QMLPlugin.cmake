@@ -239,11 +239,11 @@ function(qt5_add_qml_module TARGET)
             foreach(depends ${QMLPLUGIN_DEPEND_MODULE})
                 string(APPEND __qml_plugin_qmldir_content "module ${depends}\n")
                 string(APPEND __qml_plugin_qmldir_content "typeinfo ${depends}.qmltypes\n")
-                string(APPEND __qml_plugin_qmldir_content "${depends} 1.0 ${depends}.qml\n")
+                string(APPEND __qml_plugin_qmldir_content "${depends} ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} ${depends}.qml\n")
                 configure_file(${__qml_plugin_current_dir}/qmldir.in ${QT_QML_INSTALL_DIR}/${depends}/qmldir @ONLY)
                 configure_file(${__qml_plugin_current_dir}/projectdepends.qml.in ${QT_QML_INSTALL_DIR}/${depends}/${depends}.qml)
                 add_custom_target(${depends}qmltypes ALL
-                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} 1.0 ${QT_QML_INSTALL_DIR} > ${QT_QML_INSTALL_DIR}/${depends}/${depends}.qmltypes
+                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} ${QT_QML_INSTALL_DIR} > ${QT_QML_INSTALL_DIR}/${depends}/${depends}.qmltypes
                     COMMENT "Generating ${depends}.qmltypes"
                     DEPENDS ${TARGET})
             endforeach()
