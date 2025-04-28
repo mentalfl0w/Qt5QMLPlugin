@@ -13,7 +13,7 @@ endfunction()
 ### qmake itself tells us where the bin files are stored
 function(FindQtBinDir)
     execute_process(
-            COMMAND qmake -query QT_INSTALL_BINS
+            COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_BINS
             OUTPUT_VARIABLE __QT_BIN_DIR
             OUTPUT_STRIP_TRAILING_WHITESPACE
     )
