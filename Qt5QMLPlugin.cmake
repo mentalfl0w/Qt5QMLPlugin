@@ -33,7 +33,7 @@ endfunction()
 function(FindQtInstallQml)
     FindQtBinDir()
 
-    set(QT_QML_INSTALL_DIR ${QT_ROOT_DIR}qml PARENT_SCOPE)
+    set(QT_QML_INSTALL_DIR ${QT_BIN_DIR}/../qml PARENT_SCOPE)
 endfunction()
 
 function(qt_add_executable)
