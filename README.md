@@ -52,6 +52,8 @@ qt_add_qml_module(<TARGET>
 
 ##### ***If you want to make a static plugin, don't forget to add this code below to your project:***
 ```cpp
+// include this header file
+#include <QtQml/qqmlextensionplugin.h>
 // Add below code before your main() function
 #ifdef YOUR_UPPER_CASE_URI_BUILD_STATIC_LIB
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) // Add this check if you want to support both Qt 5 and Qt 6
