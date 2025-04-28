@@ -251,7 +251,7 @@ function(qt5_add_qml_module TARGET)
     endif()
 
     ### Generate qrc file
-    if(QMLPLUGIN_RESOURCES)
+    if(QMLPLUGIN_RESOURCES OR QMLPLUGIN_QML_FILES)
         set(__qml_plugin_qrc_content "")
         set(__qml_plugin_resources ${QMLPLUGIN_RESOURCES} ${QMLPLUGIN_QML_FILES})
         if (NOT __target_type MATCHES "SHARED_LIBRARY")
@@ -265,12 +265,13 @@ function(qt5_add_qml_module TARGET)
             endif()
             get_filename_component(__rscfile_full_name ${resourcefile} NAME)
             string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_path ${__rscfile_path})
+            string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_absolute_path ${resourcefile})
             string(REPLACE ${__rscfile_full_name} "" __rscfile_relative_dir ${__rscfile_path})
             add_custom_command(
                 OUTPUT ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__rscfile_path}
                 COMMAND ${CMAKE_COMMAND} -E make_directory ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/${resourcefile} ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__rscfile_path}
-                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${resourcefile}
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path} ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__rscfile_path}
+                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path}
                 COMMENT "Copying ${__rscfile_full_name} to ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}")
             string(APPEND __qml_plugin_qrc_content "        <file>${__rscfile_path}</file>\n")
         endforeach()
