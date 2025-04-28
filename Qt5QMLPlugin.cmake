@@ -32,8 +32,8 @@ endfunction()
 ### Sets QT_QML_INSTALL_DIR to the directory where QML Plugins should be installed
 function(FindQtInstallQml)
     FindQtBinDir()
-
-    set(QT_QML_INSTALL_DIR ${QT_BIN_DIR}/../qml PARENT_SCOPE)
+    cmake_path(SET __QT_QML_INSTALL_DIR NORMALIZE ${QT_BIN_DIR}/../qml)
+    set(QT_QML_INSTALL_DIR ${__QT_QML_INSTALL_DIR} PARENT_SCOPE)
 endfunction()
 
 function(qt_add_executable)
