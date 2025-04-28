@@ -76,8 +76,7 @@ function(qt5_add_qml_module TARGET)
     list(GET QMLPLUGIN_VERSION_LIST 0 QMLPLUGIN_VERSION_MAJOR)
     list(GET QMLPLUGIN_VERSION_LIST 1 QMLPLUGIN_VERSION_MINOR)
 
-    string(TOLOWER ${TARGET} __qml_plugin_target_name_lower)
-    string(TOUPPER ${TARGET} __qml_plugin_target_name_upper)
+    string(TOUPPER ${__qml_plugin_uri_name_for_class} __qml_plugin_uri_name_for_class_upper)
 
     get_target_property(__target_type ${TARGET} TYPE)
 
@@ -184,7 +183,7 @@ function(qt5_add_qml_module TARGET)
 
     if (__target_type MATCHES "STATIC_LIBRARY")
         target_compile_definitions(${TARGET} PUBLIC
-            ${__qml_plugin_target_name_upper}_BUILD_STATIC_LIB)
+            ${__qml_plugin_uri_name_for_class_upper}_BUILD_STATIC_LIB)
     endif()
 
     ### Generate qmldir
