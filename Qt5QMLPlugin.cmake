@@ -10,17 +10,22 @@ function(FindQmlPluginDump)
     set(QMLPLUGINDUMP_BIN ${QT_BIN_DIR}/qmlplugindump PARENT_SCOPE)
 endfunction()
 
-### qmake itself tells us where the bin files are stored
-function(FindQtBinDir)
+### qmake itself tells us where the arch files are stored
+function(FindQtRootDir)
     execute_process(
-            COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_BINS
-            OUTPUT_VARIABLE __QT_BIN_DIR
+            COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_ARCHDATA
+            OUTPUT_VARIABLE __QT_ROOT_DIR
             OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    if(__QT_BIN_DIR STREQUAL "")
-        cmake_path(SET __QT_BIN_DIR NORMALIZE ${Qt5_DIR}/../../../bin)
+    if(__QT_ROOT_DIR STREQUAL "")
+        cmake_path(SET __QT_ROOT_DIR NORMALIZE ${Qt5_DIR}/../../../)
     endif()
-    set(QT_BIN_DIR ${__QT_BIN_DIR} PARENT_SCOPE)
+    set(QT_ROOT_DIR ${__QT_ROOT_DIR} PARENT_SCOPE)
+endfunction()
+
+function(FindQtBinDir)
+    FindQtRootDir()
+    set(QT_BIN_DIR ${QT_ROOT_DIR}/bin PARENT_SCOPE)
 endfunction()
 
 function(FindQmlTypeRegistrar)
@@ -31,9 +36,8 @@ endfunction()
 
 ### Sets QT_QML_INSTALL_DIR to the directory where QML Plugins should be installed
 function(FindQtInstallQml)
-    FindQtBinDir()
-    cmake_path(SET __QT_QML_INSTALL_DIR NORMALIZE ${QT_BIN_DIR}/../qml)
-    set(QT_QML_INSTALL_DIR ${__QT_QML_INSTALL_DIR} PARENT_SCOPE)
+    FindQtRootDir()
+    set(QT_QML_INSTALL_DIR ${QT_ROOT_DIR}/qml PARENT_SCOPE)
 endfunction()
 
 function(qt_add_executable)
