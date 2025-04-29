@@ -81,10 +81,12 @@ function(qt5_add_qml_module TARGET)
     get_target_property(__target_type ${TARGET} TYPE)
 
     ### Depending on project hierarchy, one might want to specify a custom binary dir
-    if(NOT QMLPLUGIN_OUTPUT_DIRECTORY AND __target_type MATCHES "LIBRARY")
-        set(QMLPLUGIN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_dir})
-    else()
-        set(QMLPLUGIN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    if(NOT QMLPLUGIN_OUTPUT_DIRECTORY)
+        if(__target_type MATCHES "LIBRARY")
+            set(QMLPLUGIN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_dir})
+        else()
+            set(QMLPLUGIN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+        endif()
     endif()
 
     if(QMLPLUGIN_NO_PUBLIC_SOURCES OR __qml_plugin_no_public_sources)
