@@ -66,7 +66,7 @@ endfunction()
 function(qt5_add_qml_module TARGET)
     set(options NO_GENERATE_TYPEINFO NO_PUBLIC_SOURCES)
     set(oneValueArgs URI VERSION PLUGIN_TARGET OUTPUT_DIRECTORY RESOURCE_PREFIX TYPEINFO)
-    set(multiValueArgs SOURCES QML_FILES RESOURCES DEPEND_MODULE)
+    set(multiValueArgs SOURCES QML_FILES RESOURCES DEPEND_MODULE DEPEND_MODULE_FAKE)
     cmake_parse_arguments(QMLPLUGIN "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     ### At least TARGET, URI and VERSION must be specified
@@ -143,6 +143,10 @@ function(qt5_add_qml_module TARGET)
 
     if(NOT DEFINED QMLPLUGIN_DEPEND_MODULE AND __qml_plugin_depend_module)
         set(QMLPLUGIN_DEPEND_MODULE ${__qml_plugin_depend_module})
+    endif()
+
+    if(NOT DEFINED QMLPLUGIN_DEPEND_MODULE_FAKE AND __qml_plugin_depend_module_fake)
+        set(QMLPLUGIN_DEPEND_MODULE_FAKE ${__qml_plugin_depend_module_fake})
     endif()
 
     ### Set target output directory
@@ -275,10 +279,13 @@ function(qt5_add_qml_module TARGET)
                     COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} 1.0 ${__qml_plugin_output_dir_parent} -output "${__qml_plugin_output_dir_parent}/${depends_dir}/${depends}.qmltypes"
                     COMMENT "Generating ${TARGET} depended ${depends}.qmltypes"
                     DEPENDS ${TARGET})
-                add_custom_target(${TARGET}-${depends}qmltypes-Clean ALL
-                    DEPENDS ${TARGET}qmltypes
-                    COMMAND ${CMAKE_COMMAND} -E rm -rf ${__qml_plugin_output_dir_parent}/${depends_dir}
-                    COMMENT "Removing ${TARGET} depended ${depends}.qmltypes")
+                list(FIND QMLPLUGIN_DEPEND_MODULE_FAKE ${depends} fake_index)
+                if(fake_index EQUAL -1)
+                    add_custom_target(${TARGET}-${depends}qmltypes-Clean ALL
+                        DEPENDS ${TARGET}qmltypes
+                        COMMAND ${CMAKE_COMMAND} -E rm -rf ${__qml_plugin_output_dir_parent}/${depends_dir}
+                        COMMENT "Removing ${TARGET} depended ${depends}.qmltypes")
+                endif()
             endforeach()
         endif()
     endif()
