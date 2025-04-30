@@ -201,7 +201,7 @@ function(qt5_add_qml_module TARGET)
 
         set(__qml_plugin_automoc_type_register_cpp ${CMAKE_CURRENT_BINARY_DIR}/${QMLPLUGIN_PLUGIN_TARGET}_qmltyperegistrations.cpp)
         add_custom_command(OUTPUT ${__qml_plugin_automoc_type_register_cpp}
-            COMMAND ${QMLTYPEREGISTRAR_BIN} --import-name ${__qml_plugin_uri_name} --major-version ${QMLPLUGIN_VERSION_MAJOR} --minor-version 0 ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json --generate-qmltypes ${CMAKE_CURRENT_BINARY_DIR}/${QMLPLUGIN_TYPEINFO} > ${__qml_plugin_automoc_type_register_cpp}
+            COMMAND ${QMLTYPEREGISTRAR_BIN} --import-name ${__qml_plugin_uri_name} --major-version ${QMLPLUGIN_VERSION_MAJOR} --minor-version ${QMLPLUGIN_VERSION_MINOR} ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json --generate-qmltypes ${CMAKE_CURRENT_BINARY_DIR}/${QMLPLUGIN_TYPEINFO} > ${__qml_plugin_automoc_type_register_cpp}
             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
 
         add_custom_target(${__qml_plugin_uri_name_for_class}-automoc_type_register_generate ALL
@@ -248,18 +248,18 @@ function(qt5_add_qml_module TARGET)
             endif()
             string(REPLACE ${__qmlfile_full_name} "" __qmlfile_relative_dir ${__qmlfile_path})
             if(${__qmlfile_is_singleton} STREQUAL "NOTFOUND" OR NOT __qmlfile_is_singleton)
-                string(APPEND __qml_plugin_qmldir_content "${__qmlfile_name} ${QMLPLUGIN_VERSION_MAJOR}.0 ${__qmlfile_path}\n")
+                string(APPEND __qml_plugin_qmldir_content "${__qmlfile_name} ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} ${__qmlfile_path}\n")
                 if (__target_type MATCHES "STATIC_LIBRARY")
                     string(APPEND __qml_plugin_static_register_content "    qmlRegisterType(")
                 endif()
             else()
-                string(APPEND __qml_plugin_qmldir_content "singleton ${__qmlfile_name} ${QMLPLUGIN_VERSION_MAJOR}.0 ${__qmlfile_path}\n")
+                string(APPEND __qml_plugin_qmldir_content "singleton ${__qmlfile_name} ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} ${__qmlfile_path}\n")
                 if (__target_type MATCHES "STATIC_LIBRARY")
                     string(APPEND __qml_plugin_static_register_content "    qmlRegisterSingletonType(")
                 endif()
             endif()
             if (__target_type MATCHES "STATIC_LIBRARY")
-                string(APPEND __qml_plugin_static_register_content "QUrl(\"qrc:${__qml_plugin_qrc_prefix}/${__qmlfile_path}\"),\"${__qml_plugin_uri_name_for_class}\",${QMLPLUGIN_VERSION_MAJOR},0,\"${__qmlfile_name}\");\n")
+                string(APPEND __qml_plugin_static_register_content "QUrl(\"qrc:${__qml_plugin_qrc_prefix}/${__qmlfile_path}\"),\"${__qml_plugin_uri_name_for_class}\",${QMLPLUGIN_VERSION_MAJOR},${QMLPLUGIN_VERSION_MINOR},\"${__qmlfile_name}\");\n")
             endif()
         endforeach()
         if (__target_type MATCHES "STATIC_LIBRARY")
@@ -272,11 +272,11 @@ function(qt5_add_qml_module TARGET)
                 string(REPLACE "." "/" depends_dir ${depends})
                 string(APPEND __qml_plugin_qmldir_content "module ${depends}\n")
                 string(APPEND __qml_plugin_qmldir_content "typeinfo ${depends}.qmltypes\n")
-                string(APPEND __qml_plugin_qmldir_content "Item 1.0 Item.qml\n")
+                string(APPEND __qml_plugin_qmldir_content "Item ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} Item.qml\n")
                 configure_file(${__qml_plugin_current_dir}/qmldir.in ${__qml_plugin_output_dir_parent}/${depends_dir}/qmldir @ONLY)
                 configure_file(${__qml_plugin_current_dir}/projectdepends.qml.in ${__qml_plugin_output_dir_parent}/${depends_dir}/Item.qml)
                 add_custom_target(${TARGET}-${depends}qmltypes ALL
-                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} 1.0 ${__qml_plugin_output_dir_parent} -output "${__qml_plugin_output_dir_parent}/${depends_dir}/${depends}.qmltypes"
+                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} ${__qml_plugin_output_dir_parent} -output "${__qml_plugin_output_dir_parent}/${depends_dir}/${depends}.qmltypes"
                     COMMENT "Generating ${TARGET} depended ${depends}.qmltypes"
                     DEPENDS ${TARGET})
                 list(FIND QMLPLUGIN_DEPEND_MODULE_FAKE ${depends} fake_index)
@@ -328,7 +328,7 @@ function(qt5_add_qml_module TARGET)
         endif()
         add_custom_target(${TARGET}qmltypes ALL
             DEPENDS ${__qmltypes_depend}
-            COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${QMLPLUGIN_URI} ${QMLPLUGIN_VERSION_MAJOR}.0 ${__qml_plugin_output_dir_parent} -output ${QMLPLUGIN_OUTPUT_DIRECTORY}/${QMLPLUGIN_TYPEINFO}
+            COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${QMLPLUGIN_URI} ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} ${__qml_plugin_output_dir_parent} -output ${QMLPLUGIN_OUTPUT_DIRECTORY}/${QMLPLUGIN_TYPEINFO}
             COMMENT "Generating ${QMLPLUGIN_TYPEINFO}")
     endif()
 
