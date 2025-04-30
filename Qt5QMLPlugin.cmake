@@ -66,7 +66,7 @@ endfunction()
 function(qt5_add_qml_module TARGET)
     set(options NO_GENERATE_TYPEINFO NO_PUBLIC_SOURCES)
     set(oneValueArgs URI VERSION PLUGIN_TARGET OUTPUT_DIRECTORY RESOURCE_PREFIX TYPEINFO)
-    set(multiValueArgs SOURCES QML_FILES RESOURCES DEPEND_MODULE DEPEND_MODULE_FAKE)
+    set(multiValueArgs SOURCES QML_FILES RESOURCES DEPEND_MODULE DEPEND_MODULE_VERSION DEPEND_MODULE_FAKE)
     cmake_parse_arguments(QMLPLUGIN "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     ### At least TARGET, URI and VERSION must be specified
@@ -143,6 +143,10 @@ function(qt5_add_qml_module TARGET)
 
     if(NOT DEFINED QMLPLUGIN_DEPEND_MODULE AND __qml_plugin_depend_module)
         set(QMLPLUGIN_DEPEND_MODULE ${__qml_plugin_depend_module})
+    endif()
+
+    if(NOT DEFINED QMLPLUGIN_DEPEND_MODULE_VERSION AND __qml_plugin_depend_module_version)
+        set(QMLPLUGIN_DEPEND_MODULE_VERSION ${__qml_plugin_depend_module_version})
     endif()
 
     if(NOT DEFINED QMLPLUGIN_DEPEND_MODULE_FAKE AND __qml_plugin_depend_module_fake)
@@ -269,14 +273,19 @@ function(qt5_add_qml_module TARGET)
         if(QMLPLUGIN_DEPEND_MODULE AND __target_type MATCHES "SHARED_LIBRARY" AND NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
             foreach(depends ${QMLPLUGIN_DEPEND_MODULE})
                 set(__qml_plugin_qmldir_content "")
+                list(FIND QMLPLUGIN_DEPEND_MODULE ${depends} fake_version_index)
+                list(GET QMLPLUGIN_DEPEND_MODULE_VERSION ${fake_version_index} depend_fake_version)
+                if(depend_fake_version STREQUAL "NOTFOUND")
+                    set(depend_fake_version ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR})
+                endif()
                 string(REPLACE "." "/" depends_dir ${depends})
                 string(APPEND __qml_plugin_qmldir_content "module ${depends}\n")
                 string(APPEND __qml_plugin_qmldir_content "typeinfo ${depends}.qmltypes\n")
-                string(APPEND __qml_plugin_qmldir_content "Item ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} Item.qml\n")
+                string(APPEND __qml_plugin_qmldir_content "Item ${depend_fake_version} Item.qml\n")
                 configure_file(${__qml_plugin_current_dir}/qmldir.in ${__qml_plugin_output_dir_parent}/${depends_dir}/qmldir @ONLY)
                 configure_file(${__qml_plugin_current_dir}/projectdepends.qml.in ${__qml_plugin_output_dir_parent}/${depends_dir}/Item.qml)
                 add_custom_target(${TARGET}-${depends}qmltypes ALL
-                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} ${__qml_plugin_output_dir_parent} -output "${__qml_plugin_output_dir_parent}/${depends_dir}/${depends}.qmltypes"
+                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} ${depend_fake_version} ${__qml_plugin_output_dir_parent} -output "${__qml_plugin_output_dir_parent}/${depends_dir}/${depends}.qmltypes"
                     COMMENT "Generating ${TARGET} depended ${depends}.qmltypes"
                     DEPENDS ${TARGET})
                 list(FIND QMLPLUGIN_DEPEND_MODULE_FAKE ${depends} fake_index)
