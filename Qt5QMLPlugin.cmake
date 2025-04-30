@@ -98,6 +98,8 @@ function(qt5_add_qml_module TARGET)
             set(QMLPLUGIN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         endif()
     endif()
+    cmake_path(SET __qml_plugin_output_dir_parent NORMALIZE ${QMLPLUGIN_OUTPUT_DIRECTORY}/../)
+    string(REGEX REPLACE "[/]+$" "" __qml_plugin_output_dir_parent "${__qml_plugin_output_dir_parent}")
 
     if(QMLPLUGIN_NO_PUBLIC_SOURCES OR __qml_plugin_no_public_sources)
         set(QMLPLUGIN_NO_PUBLIC_SOURCES ON)
@@ -107,7 +109,7 @@ function(qt5_add_qml_module TARGET)
         set(__qml_plugin_sources_flag PUBLIC)
     endif()
 
-    if(QMLPLUGIN_NO_GENERATE_TYPEINFO OR __qml_plugin_no_generate_typeinfo OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(QMLPLUGIN_NO_GENERATE_TYPEINFO OR __qml_plugin_no_generate_typeinfo)
         set(QMLPLUGIN_NO_GENERATE_TYPEINFO ON)
     else()
         set(QMLPLUGIN_NO_GENERATE_TYPEINFO OFF)
@@ -258,17 +260,22 @@ function(qt5_add_qml_module TARGET)
         endif()
         configure_file(${__qml_plugin_current_dir}/qmldir.in ${QMLPLUGIN_OUTPUT_DIRECTORY}/qmldir @ONLY)
         if(QMLPLUGIN_DEPEND_MODULE AND __target_type MATCHES "SHARED_LIBRARY" AND NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
-            set(__qml_plugin_qmldir_content "")
             foreach(depends ${QMLPLUGIN_DEPEND_MODULE})
+                set(__qml_plugin_qmldir_content "")
+                string(REPLACE "." "/" depends_dir ${depends})
                 string(APPEND __qml_plugin_qmldir_content "module ${depends}\n")
                 string(APPEND __qml_plugin_qmldir_content "typeinfo ${depends}.qmltypes\n")
-                string(APPEND __qml_plugin_qmldir_content "${depends} 1.0 ${depends}.qml\n")
-                configure_file(${__qml_plugin_current_dir}/qmldir.in ${QT_QML_INSTALL_DIR}/${depends}/qmldir @ONLY)
-                configure_file(${__qml_plugin_current_dir}/projectdepends.qml.in ${QT_QML_INSTALL_DIR}/${depends}/${depends}.qml)
-                add_custom_target(${depends}qmltypes ALL
-                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} 1.0 ${QT_QML_INSTALL_DIR} > ${QT_QML_INSTALL_DIR}/${depends}/${depends}.qmltypes
-                    COMMENT "Generating ${depends}.qmltypes"
+                string(APPEND __qml_plugin_qmldir_content "Item 1.0 Item.qml\n")
+                configure_file(${__qml_plugin_current_dir}/qmldir.in ${__qml_plugin_output_dir_parent}/${depends_dir}/qmldir @ONLY)
+                configure_file(${__qml_plugin_current_dir}/projectdepends.qml.in ${__qml_plugin_output_dir_parent}/${depends_dir}/Item.qml)
+                add_custom_target(${TARGET}-${depends}qmltypes ALL
+                    COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} 1.0 ${__qml_plugin_output_dir_parent} -output "${__qml_plugin_output_dir_parent}/${depends_dir}/${depends}.qmltypes"
+                    COMMENT "Generating ${TARGET} depended ${depends}.qmltypes"
                     DEPENDS ${TARGET})
+                add_custom_target(${TARGET}-${depends}qmltypes-Clean ALL
+                    DEPENDS ${TARGET}qmltypes
+                    COMMAND ${CMAKE_COMMAND} -E rm -rf ${__qml_plugin_output_dir_parent}/${depends_dir}
+                    COMMENT "Removing ${TARGET} depended ${depends}.qmltypes")
             endforeach()
         endif()
     endif()
@@ -307,9 +314,8 @@ function(qt5_add_qml_module TARGET)
         set(__qmltypes_depend ${TARGET})
         if(QMLPLUGIN_DEPEND_MODULE AND NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
             list(GET QMLPLUGIN_DEPEND_MODULE 0 __qmltypes_depend)
-            set(__qmltypes_depend ${__qmltypes_depend}qmltypes)
+            set(__qmltypes_depend ${TARGET}-${__qmltypes_depend}qmltypes)
         endif()
-        cmake_path(SET __qml_plugin_output_dir_parent NORMALIZE ${QMLPLUGIN_OUTPUT_DIRECTORY}/../)
         add_custom_target(${TARGET}qmltypes ALL
             DEPENDS ${__qmltypes_depend}
             COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${QMLPLUGIN_URI} ${QMLPLUGIN_VERSION_MAJOR}.0 ${__qml_plugin_output_dir_parent} -output ${QMLPLUGIN_OUTPUT_DIRECTORY}/${QMLPLUGIN_TYPEINFO}
