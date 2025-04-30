@@ -42,7 +42,8 @@ qt_add_qml_module(<TARGET>
 | `SOURCES`    | Should contain all the C++ sources to be compiled with this plugin. |
 | `QML_FILES`   | Should contain all QML files which should be copied to the `${QT_QML_INSTALL_DIR}/org/mycompany/components` directory. It will be added to qrc file too. |
 | `RESOURCES` | The files which will be added to the qrc files. |
-| `DEPEND_MODULE` | The 3rdparty module your module need but `qmlplugindump` couldn't find, add it name to this, it will generate a fake module to bypass the `qmlplugindump`'s check. A little trick to let typeinfo file be normally generated. |
+| `DEPEND_MODULE` | The 3rdparty module your module need but `qmlplugindump` couldn't find at building time, but which will finally occured. Add it name to this, it will generate a fake module to bypass the `qmlplugindump`'s check. A little trick to let typeinfo file be normally generated. |
+| `DEPEND_MODULE_FAKE` | The 3rdparty module your module need but `qmlplugindump` couldn't find at ALL TIME(Like a pure C++ module which doesn't generate qmldir and etc.). Add it name to this and `DEPEND_MODULE`, and anything will be OK.|
 | `RESOURCE_PREFIX` | A prefix that will be used in qrc file system. |
 | `PLUGIN_TARGET` | Default is the lowercase URI. Change it if you like. |
 | `OUTPUT_DIRECTORY` | Default is ${CMAKE_CURRENT_BINARY_DIR}/org/mycompany/components. Change it if you like. |
