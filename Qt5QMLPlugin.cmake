@@ -12,7 +12,7 @@ endfunction()
 
 ### qmake itself tells us where the arch files are stored
 function(FindQtRootDir)
-    if(QT_QMAKE_EXECUTABLE STREQUAL "")
+    if(NOT QT_QMAKE_EXECUTABLE)
         get_target_property (QT_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
     endif()
     execute_process(
