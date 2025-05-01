@@ -66,7 +66,7 @@ endfunction()
 function(qt5_add_qml_module TARGET)
     set(options NO_GENERATE_TYPEINFO NO_PUBLIC_SOURCES)
     set(oneValueArgs URI VERSION PLUGIN_TARGET OUTPUT_DIRECTORY RESOURCE_PREFIX TYPEINFO)
-    set(multiValueArgs SOURCES QML_FILES RESOURCES DEPEND_MODULE DEPEND_MODULE_VERSION DEPEND_MODULE_FAKE)
+    set(multiValueArgs SOURCES QML_FILES RESOURCES DEPEND_MODULE DEPEND_MODULE_VERSION)
     cmake_parse_arguments(QMLPLUGIN "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     ### At least TARGET, URI and VERSION must be specified
@@ -103,6 +103,9 @@ function(qt5_add_qml_module TARGET)
     endif()
     cmake_path(SET __qml_plugin_output_dir_parent NORMALIZE ${QMLPLUGIN_OUTPUT_DIRECTORY}/../)
     string(REGEX REPLACE "[/]+$" "" __qml_plugin_output_dir_parent "${__qml_plugin_output_dir_parent}")
+    get_property(__qml_plugin_qml_import_path GLOBAL PROPERTY __qml_plugin_qml_import_path)
+    set_property(GLOBAL PROPERTY __qml_plugin_qml_import_path "${__qml_plugin_qml_import_path}:${__qml_plugin_output_dir_parent}")
+    get_property(__qml_plugin_qml_import_path GLOBAL PROPERTY __qml_plugin_qml_import_path)
 
     if(QMLPLUGIN_NO_PUBLIC_SOURCES OR __qml_plugin_no_public_sources)
         set(QMLPLUGIN_NO_PUBLIC_SOURCES ON)
@@ -147,10 +150,6 @@ function(qt5_add_qml_module TARGET)
 
     if(NOT DEFINED QMLPLUGIN_DEPEND_MODULE_VERSION AND __qml_plugin_depend_module_version)
         set(QMLPLUGIN_DEPEND_MODULE_VERSION ${__qml_plugin_depend_module_version})
-    endif()
-
-    if(NOT DEFINED QMLPLUGIN_DEPEND_MODULE_FAKE AND __qml_plugin_depend_module_fake)
-        set(QMLPLUGIN_DEPEND_MODULE_FAKE ${__qml_plugin_depend_module_fake})
     endif()
 
     ### Set target output directory
@@ -288,13 +287,6 @@ function(qt5_add_qml_module TARGET)
                     COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${depends} ${depend_fake_version} ${__qml_plugin_output_dir_parent} -output "${__qml_plugin_output_dir_parent}/${depends_dir}/${depends}.qmltypes"
                     COMMENT "Generating ${TARGET} depended ${depends}.qmltypes"
                     DEPENDS ${TARGET})
-                list(FIND QMLPLUGIN_DEPEND_MODULE_FAKE ${depends} fake_index)
-                if(fake_index EQUAL -1)
-                    add_custom_target(${TARGET}-${depends}qmltypes-Clean ALL
-                        DEPENDS ${TARGET}qmltypes
-                        COMMAND ${CMAKE_COMMAND} -E rm -rf ${__qml_plugin_output_dir_parent}/${depends_dir}
-                        COMMENT "Removing ${TARGET} depended ${depends}.qmltypes")
-                endif()
             endforeach()
         endif()
     endif()
@@ -337,7 +329,7 @@ function(qt5_add_qml_module TARGET)
         endif()
         add_custom_target(${TARGET}qmltypes ALL
             DEPENDS ${__qmltypes_depend}
-            COMMAND ${QMLPLUGINDUMP_BIN} -nonrelocatable ${QMLPLUGIN_URI} ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} ${__qml_plugin_output_dir_parent} -output ${QMLPLUGIN_OUTPUT_DIRECTORY}/${QMLPLUGIN_TYPEINFO}
+            COMMAND ${CMAKE_COMMAND} -E env QML2_IMPORT_PATH="${__qml_plugin_qml_import_path}" ${QMLPLUGINDUMP_BIN} -nonrelocatable ${QMLPLUGIN_URI} ${QMLPLUGIN_VERSION_MAJOR}.${QMLPLUGIN_VERSION_MINOR} ${__qml_plugin_output_dir_parent} -output ${QMLPLUGIN_OUTPUT_DIRECTORY}/${QMLPLUGIN_TYPEINFO}
             COMMENT "Generating ${QMLPLUGIN_TYPEINFO}")
     endif()
 
