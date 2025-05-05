@@ -73,6 +73,9 @@ Q_IMPORT_QML_PLUGIN(YOUR_UPPER_CASE_URIPlugin)
 #endif
 ```
 
+##### Building Notice
+**The Ninja generator is recommended (it can be compiled in parallel), other generators (like Make) can be compiled, but it should be noted that they cannot be compiled in parallel (like make -j4 or cmake ---build --parallel)**
+
 ### Example
 ```cmake
 qt_add_qml_module(components
