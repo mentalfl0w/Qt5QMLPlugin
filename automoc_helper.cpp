@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #if defined(_WIN32)
@@ -7,6 +8,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #endif
+bool has_found=false;
 
 void findMocJsonFiles(const std::string& path, const std::string& relativePath = "") {
     std::vector<std::string> files;
@@ -69,6 +71,8 @@ void findMocJsonFiles(const std::string& path, const std::string& relativePath =
     // Process files
     for (const auto& file : files) {
         if (file.rfind("moc", 0) == 0 && file.substr(file.length() - 5) == ".json") {
+            if(!has_found)
+                has_found = true;
             std::cout << relativePath + file << "\n";
         }
     }
@@ -87,6 +91,17 @@ int main(int argc, char* argv[]) {
 
     std::string startDirectory = argv[1];
     findMocJsonFiles(startDirectory, startDirectory + "/");
+    if(!has_found){
+        std::ofstream temp(startDirectory+"/blank.json");
+        if(temp.is_open()){
+            std::cout << startDirectory + "/blank.json";
+            temp.close();
+        }
+        else{
+            std::cout<<"Write temp file error!";
+            return -1;
+        }
+    }
     std::cout << std::endl;
     return 0;
 }
