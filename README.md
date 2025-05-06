@@ -93,7 +93,10 @@ RESOURCES
     resources/icon.png
 )
 ```
+Here is an example project for you: [Qt5QMLPlugin_Example](https://github.com/DanuulKa03/Qt5QMLPlugin_Example).
 
 ## Acknowledgement
 
 Thanks to pntzio's [cmake-qmlplugin](https://github.com/pntzio/cmake-qmlplugin) for the reference and inspiration.
+
+Thanks to DanuulKa03 for providing the great idea of creating a example for `Qt5QMLPlugin`. You can find it by click [Qt5QMLPlugin_Example](https://github.com/DanuulKa03/Qt5QMLPlugin_Example).
