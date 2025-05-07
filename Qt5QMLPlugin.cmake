@@ -51,6 +51,141 @@ function(FindQtInstallQml)
     set(QT_QML_INSTALL_DIR ${QT_ROOT_DIR}/qml PARENT_SCOPE)
 endfunction()
 
+function(qt5_add_resources_plus QRC_FILES RESOURCE_NAME)
+    set(options)
+    set(oneValueArgs PREFIX OUTPUT_TARGETS)
+    set(multiValueArgs BIG_RESOURCES FILES OPTIONS)
+    cmake_parse_arguments(__RCC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    set(__other_rcc_files ${__RCC_UNPARSED_ARGUMENTS})
+    if(NOT __RCC_OUTPUT_TARGETS)
+        set(__RCC_OUTPUT_TARGETS "${RESOURCE_NAME}")
+    endif()
+    if(NOT __RCC_PREFIX)
+        set(__RCC_PREFIX "/")
+    endif()
+    if(__RCC_FILES)
+        set(__qml_plugin_qrc_prefix ${__RCC_PREFIX})
+        __generate_qrc_file(
+            OUTPUT_NAME ${__RCC_OUTPUT_TARGETS}
+            OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            FILES ${__RCC_FILES}
+        )
+        list(APPEND __other_rcc_files ${CMAKE_CURRENT_BINARY_DIR}/${__RCC_OUTPUT_TARGETS}.qrc)
+    else()
+        list(APPEND __other_rcc_files ${RESOURCE_NAME})
+    endif()
+    if(__RCC_BIG_RESOURCES)
+        set(__qml_plugin_qrc_prefix ${__RCC_PREFIX})
+        __generate_qrc_file(
+            OUTPUT_NAME ${__RCC_OUTPUT_TARGETS}_big
+            OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            FILES ${__RCC_BIG_RESOURCES}
+        )
+        if(__RCC_OPTION)
+            qt5_add_big_resources(QRC_FILES ${CMAKE_CURRENT_BINARY_DIR}/${__RCC_OUTPUT_TARGETS}_big.qrc OPTION ${_RCC_OPTIONS})
+        else()
+            qt5_add_big_resources(QRC_FILES ${CMAKE_CURRENT_BINARY_DIR}/${__RCC_OUTPUT_TARGETS}_big.qrc)
+        endif()
+    endif()
+    if(__RCC_OPTION)
+        qt5_add_resources(QRC_FILES ${__other_rcc_files} OPTION ${_RCC_OPTIONS})
+    else()
+        qt5_add_resources(QRC_FILES ${__other_rcc_files})
+    endif()
+    set(${QRC_FILES} ${${QRC_FILES}} PARENT_SCOPE)
+endfunction()
+
+function(qt5_add_big_resources_plus QRC_FILES)
+    set(options)
+    set(oneValueArgs PREFIX OUTPUT_TARGETS)
+    set(multiValueArgs FILES OPTIONS)
+    cmake_parse_arguments(__RCC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    set(__other_rcc_files ${__RCC_UNPARSED_ARGUMENTS})
+    if(NOT __RCC_OUTPUT_TARGETS)
+        set(__RCC_OUTPUT_TARGETS "${CMAKE_PROJECT_NAME}_big_rcc")
+    endif()
+    if(NOT __RCC_PREFIX)
+        set(__RCC_PREFIX "/")
+    endif()
+    if(__RCC_FILES)
+        set(__qml_plugin_qrc_prefix ${__RCC_PREFIX})
+        __generate_qrc_file(
+            OUTPUT_NAME ${__RCC_OUTPUT_TARGETS}_big
+            OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            FILES ${__RCC_FILES}
+        )
+        list(APPEND __other_rcc_files ${CMAKE_CURRENT_BINARY_DIR}/${__RCC_OUTPUT_TARGETS}_big.qrc)
+    endif()
+    if(__RCC_OPTION)
+        qt5_add_big_resources(QRC_FILES ${__other_rcc_files} OPTION ${_RCC_OPTIONS})
+    else()
+        qt5_add_big_resources(QRC_FILES ${__other_rcc_files})
+    endif()
+    set(${QRC_FILES} ${${QRC_FILES}} PARENT_SCOPE)
+endfunction()
+
+function(qt5_add_binary_resources_plus RCC_FILE)
+    set(options)
+    set(oneValueArgs PREFIX OUTPUT_TARGETS)
+    set(multiValueArgs FILES OPTIONS)
+    cmake_parse_arguments(__RCC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    set(__other_rcc_files ${__RCC_UNPARSED_ARGUMENTS})
+    if(NOT __RCC_OUTPUT_TARGETS)
+        set(__RCC_OUTPUT_TARGETS "${CMAKE_PROJECT_NAME}_binary_rcc")
+    endif()
+    if(NOT __RCC_PREFIX)
+        set(__RCC_PREFIX "/")
+    endif()
+    if(__RCC_FILES)
+        set(__qml_plugin_qrc_prefix ${__RCC_PREFIX})
+        __generate_qrc_file(
+            OUTPUT_NAME ${__RCC_OUTPUT_TARGETS}_binary
+            OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            FILES ${__RCC_FILES}
+        )
+        list(APPEND __other_rcc_files ${CMAKE_CURRENT_BINARY_DIR}/${__RCC_OUTPUT_TARGETS}_binary.qrc)
+    endif()
+    if(__RCC_OPTION)
+        qt5_add_binary_resources(RCC_FILE ${__other_rcc_files} OPTION ${_RCC_OPTIONS})
+    else()
+        qt5_add_binary_resources(RCC_FILE ${__other_rcc_files})
+    endif()
+endfunction()
+
+function(__generate_qrc_file)
+    set(options HAS_QMLDIR)
+    set(oneValueArgs OUTPUT_NAME OUTPUT_DIRECTORY)
+    set(multiValueArgs FILES)
+    cmake_parse_arguments(__QRC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    set(__qml_plugin_qrc_content "")
+    set(__qml_plugin_resources ${FILES})
+    if(NOT __QRC_HAS_QMLDIR)
+        set(__QRC_HAS_QMLDIR OFF)
+    endif()
+    if(__QRC_HAS_QMLDIR)
+        string(APPEND __qml_plugin_qrc_content "        <file>qmldir</file>\n")
+    endif()
+    foreach(resourcefile ${__QRC_FILES})
+        get_source_file_property(__rscfile_path ${resourcefile} QT_RESOURCE_ALIAS)
+        if(${__rscfile_path} STREQUAL "NOTFOUND")
+            get_source_file_property(__rscfile_path ${resourcefile} LOCATION)
+            string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_path ${__rscfile_path})
+        endif()
+        get_filename_component(__rscfile_full_name ${resourcefile} NAME)
+        string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_path ${__rscfile_path})
+        string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_absolute_path ${resourcefile})
+        string(REPLACE ${__rscfile_full_name} "" __rscfile_relative_dir ${__rscfile_path})
+        add_custom_command(
+            OUTPUT ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_path}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path} ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_path}
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path}
+            COMMENT "Copying ${__rscfile_full_name} to ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}")
+        string(APPEND __qml_plugin_qrc_content "        <file>${__rscfile_path}</file>\n")
+    endforeach()
+    configure_file(${__qml_plugin_current_dir}/project.qrc.in ${__QRC_OUTPUT_DIRECTORY}/${__QRC_OUTPUT_NAME}.qrc @ONLY)
+endfunction()
+
 function(qt_add_executable)
     qt5_add_executable(${ARGV})
 endfunction()
@@ -301,31 +436,23 @@ function(qt5_add_qml_module TARGET)
 
     ### Generate qrc file
     if(QMLPLUGIN_RESOURCES OR QMLPLUGIN_QML_FILES)
-        set(__qml_plugin_qrc_content "")
-        set(__qml_plugin_resources ${QMLPLUGIN_RESOURCES} ${QMLPLUGIN_QML_FILES})
         if (NOT __target_type MATCHES "SHARED_LIBRARY")
-            string(APPEND __qml_plugin_qrc_content "        <file>qmldir</file>\n")
+            __generate_qrc_file(
+                HAS_QMLDIR ON
+                OUTPUT_NAME ${__qml_plugin_uri_name_for_class}
+                OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
+                FILES ${QMLPLUGIN_RESOURCES} ${QMLPLUGIN_QML_FILES}
+            )
+        else()
+            __generate_qrc_file(
+                HAS_QMLDIR OFF
+                OUTPUT_NAME ${__qml_plugin_uri_name_for_class}
+                OUTPUT_DIRECTORY ${QMLPLUGIN_OUTPUT_DIRECTORY}
+                FILES ${QMLPLUGIN_RESOURCES} ${QMLPLUGIN_QML_FILES}
+            )
         endif()
-        foreach(resourcefile ${__qml_plugin_resources})
-            get_source_file_property(__rscfile_path ${resourcefile} QT_RESOURCE_ALIAS)
-            if(${__rscfile_path} STREQUAL "NOTFOUND")
-                get_source_file_property(__rscfile_path ${resourcefile} LOCATION)
-                string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_path ${__rscfile_path})
-            endif()
-            get_filename_component(__rscfile_full_name ${resourcefile} NAME)
-            string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_path ${__rscfile_path})
-            string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_absolute_path ${resourcefile})
-            string(REPLACE ${__rscfile_full_name} "" __rscfile_relative_dir ${__rscfile_path})
-            add_custom_command(
-                OUTPUT ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__rscfile_path}
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path} ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__rscfile_path}
-                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path}
-                COMMENT "Copying ${__rscfile_full_name} to ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}")
-            string(APPEND __qml_plugin_qrc_content "        <file>${__rscfile_path}</file>\n")
-        endforeach()
-        configure_file(${__qml_plugin_current_dir}/project.qrc.in ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__qml_plugin_uri_name_for_class}.qrc @ONLY)
-        target_sources(${TARGET} ${__qml_plugin_sources_flag} ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__qml_plugin_uri_name_for_class}.qrc)
+        qt5_add_resources(__qml_plugin_qrc_file ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__qml_plugin_uri_name_for_class}.qrc)
+        target_sources(${TARGET} ${__qml_plugin_sources_flag} ${__qml_plugin_qrc_file})
     endif()
 
     ### Generate qmltypes

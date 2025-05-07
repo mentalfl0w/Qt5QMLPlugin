@@ -9,7 +9,8 @@ There is no other work need to be done, just use it!
 2. All resource files, including qml files, will be automatically copied to the directory after modification without manual operation.
 3. All plugin-related files (qmldir, qml extension plugin's source code, qrc file, etc.) will be automatically generated in the build directory, no need to write them manually and without polluting the code repository (just like Qt6😉).
 4. Provide `qt_add_library`,`qt5_add_library`,`qt_add_executable`,`qt5_add_executable` functions for easy code migration.
-5. Support parse `QML_ELEMENT`, `QML_NAMED_ELEMENT`,`QML_SINGLETON` macros.
+5. Provide `qt5_add_resources_plus`, `qt5_add_big_resources_plus`, `qt5_add_binary_resources_plus` for creating qrc files automatically.
+6. Support parse `QML_ELEMENT`, `QML_NAMED_ELEMENT`,`QML_SINGLETON` macros.
 
 ## Usage
 
@@ -93,6 +94,15 @@ RESOURCES
     resources/icon.png
 )
 ```
+
+You can also use `qt5_add_resources_plus` like [Qt 6's doc](https://doc.qt.io/qt-6/qt-add-resources.html)(support most all options besides LANG and BASE):
+```cmake
+qt5_add_executable(myapp main.cpp)
+qt5_add_resources_plus(myapp "images"
+    PREFIX "/images"
+    FILES image1.png image2.png)
+```
+
 Here is an example project for you: [Qt5QMLPlugin_Example](https://github.com/DanuulKa03/Qt5QMLPlugin_Example).
 
 ## Acknowledgement
