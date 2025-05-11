@@ -1,7 +1,7 @@
 include(CMakeParseArguments)
 set(__qml_plugin_current_dir ${CMAKE_CURRENT_LIST_DIR})
-option(__qml_plugin_no_generate_typeinfo OFF)
-option(__qml_plugin_no_public_sources ON)
+set(__qml_plugin_no_generate_typeinfo OFF)
+set(__qml_plugin_no_public_sources ON)
 find_package(Qt5 REQUIRED COMPONENTS Core)
 if(NOT TARGET AutoMocHelper)
     add_executable(AutoMocHelper ${__qml_plugin_current_dir}/automoc_helper.cpp)
@@ -352,11 +352,7 @@ function(qt5_add_qml_module TARGET)
 
         add_custom_target(${__qml_plugin_uri_name_for_class}-automoc_type_register_generate ALL
             DEPENDS AutoMocHelper ${__qml_plugin_automoc_type_register_cpp})
-        if (__target_type MATCHES "STATIC_LIBRARY")
-            target_sources(${TARGET} PUBLIC ${__qml_plugin_automoc_type_register_cpp})
-        else()
-            target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
-        endif()
+        target_sources(${TARGET} ${__qml_plugin_sources_flag} ${__qml_plugin_automoc_type_register_cpp})
         set_source_files_properties(${__qml_plugin_automoc_type_register_cpp} PROPERTIES SKIP_AUTOGEN ON)
     endif()
 
@@ -477,13 +473,8 @@ function(qt5_add_qml_module TARGET)
             )
         endif()
         configure_file(${__qml_plugin_current_dir}/project_URIPlugin.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name_for_class}Plugin.cpp @ONLY)
-        if (__target_type MATCHES "STATIC_LIBRARY")
-            target_sources(${TARGET} PUBLIC
-                "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name_for_class}Plugin.cpp")
-        else()
-            target_sources(${TARGET} PRIVATE
-                "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name_for_class}Plugin.cpp")
-        endif()
+        target_sources(${TARGET} ${__qml_plugin_sources_flag}
+            "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name_for_class}Plugin.cpp")
 
     endif()
 endfunction()
