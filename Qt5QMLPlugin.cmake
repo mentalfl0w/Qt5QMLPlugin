@@ -263,7 +263,7 @@ function(qt5_add_qml_module TARGET)
         set(__qml_plugin_sources_flag PUBLIC)
     endif()
 
-    if(QMLPLUGIN_NO_GENERATE_TYPEINFO OR __qml_plugin_no_generate_typeinfo)
+    if(QMLPLUGIN_NO_GENERATE_TYPEINFO OR __qml_plugin_no_generate_typeinfo OR (CMAKE_HOST_WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug"))
         set(QMLPLUGIN_NO_GENERATE_TYPEINFO ON)
     else()
         set(QMLPLUGIN_NO_GENERATE_TYPEINFO OFF)
