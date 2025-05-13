@@ -1,7 +1,7 @@
 include(CMakeParseArguments)
 set(__qml_plugin_current_dir ${CMAKE_CURRENT_LIST_DIR})
 set(__qml_plugin_no_generate_typeinfo OFF)
-set(__qml_plugin_no_public_sources ON)
+set(__qml_plugin_no_public_sources OFF)
 find_package(Qt5 REQUIRED COMPONENTS Core)
 if(NOT TARGET AutoMocHelper)
     add_executable(AutoMocHelper ${__qml_plugin_current_dir}/automoc_helper.cpp)
@@ -357,7 +357,7 @@ function(qt5_add_qml_module TARGET)
 
         add_custom_target(${__qml_plugin_uri_name_for_class}-automoc_type_register_generate ALL
             DEPENDS AutoMocHelper ${__qml_plugin_automoc_type_register_cpp})
-        target_sources(${TARGET} ${__qml_plugin_sources_flag} ${__qml_plugin_automoc_type_register_cpp})
+        target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
         set_source_files_properties(${__qml_plugin_automoc_type_register_cpp} PROPERTIES SKIP_AUTOGEN ON)
     endif()
 
@@ -450,7 +450,7 @@ function(qt5_add_qml_module TARGET)
         )
     endif()
     qt5_add_resources(__qml_plugin_qrc_file ${QMLPLUGIN_OUTPUT_DIRECTORY}/${__qml_plugin_uri_name_for_class}.qrc)
-    target_sources(${TARGET} ${__qml_plugin_sources_flag} ${__qml_plugin_qrc_file})
+    target_sources(${TARGET} PRIVATE ${__qml_plugin_qrc_file})
 
     ### Generate qmltypes
     if (__target_type MATCHES "SHARED_LIBRARY" AND NOT QMLPLUGIN_NO_GENERATE_TYPEINFO)
@@ -470,7 +470,7 @@ function(qt5_add_qml_module TARGET)
     if (__target_type MATCHES "LIBRARY")
         if (__target_type MATCHES "STATIC_LIBRARY")
             configure_file(${__qml_plugin_current_dir}/URIplugin_init.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_for_class}plugin_init.cpp @ONLY)
-            target_sources(${TARGET} ${__qml_plugin_sources_flag}
+            target_sources(${TARGET} PRIVATE
                 "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_uri_name_for_class}plugin_init.cpp")
             target_compile_definitions(${TARGET}
                 PUBLIC
@@ -478,7 +478,7 @@ function(qt5_add_qml_module TARGET)
             )
         endif()
         configure_file(${__qml_plugin_current_dir}/project_URIPlugin.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name_for_class}Plugin.cpp @ONLY)
-        target_sources(${TARGET} ${__qml_plugin_sources_flag}
+        target_sources(${TARGET} PRIVATE
             "${CMAKE_CURRENT_BINARY_DIR}/${__qml_plugin_target_name}_${__qml_plugin_uri_name_for_class}Plugin.cpp")
 
     endif()
