@@ -48,7 +48,7 @@ qt_add_qml_module(<TARGET>
 | `RESOURCE_PREFIX` | A prefix that will be used in qrc file system. |
 | `PLUGIN_TARGET` | Default is the lowercase URI. Change it if you like. |
 | `OUTPUT_DIRECTORY` | Default is ${CMAKE_CURRENT_BINARY_DIR}/org/mycompany/components. Change it if you like. |
-| `TYPEINFO` | Default name is the URI without `.`, like `orgmycompanycomponents.qmltypes`. Change it if you like. |
+| `TYPEINFO` | Default name is the URI which `.` replaced by `_`, like `org_mycompany_components.qmltypes`. Change it if you like. |
 | `NO_GENERATE_TYPEINFO` | Turn off typeinfo file auto generation. Default is OFF. If you want to keep `qt_add_qml_module` usable for both Qt5 and Qt6, you can set the `__qml_plugin_no_generate_typeinfo` to control it before use `Qt5QMLPlugin`.|
 | `NO_PUBLIC_SOURCES` | Let source files only visible for ${TARGET}. Default is ON. If you want to keep `qt_add_qml_module` usable for both Qt5 and Qt6, you can set the `__qml_plugin_no_public_sources` to control it before use `Qt5QMLPlugin`.|
 
