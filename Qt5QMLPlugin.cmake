@@ -96,6 +96,9 @@ function(qt5_add_resources_plus QRC_FILES RESOURCE_NAME)
     
     # Parse input arguments
     cmake_parse_arguments(__RCC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    if(NOT TARGET ${QRC_FILES})
+        set(__is_qrc_files TRUE)
+    endif()
     set(__other_rcc_files ${__RCC_UNPARSED_ARGUMENTS})
     # Handle output targets if not provided
     if(NOT __RCC_OUTPUT_TARGETS)
@@ -129,21 +132,26 @@ function(qt5_add_resources_plus QRC_FILES RESOURCE_NAME)
             FILES ${__RCC_BIG_RESOURCES}
         )
         if(__RCC_OPTION)
-            qt5_add_big_resources(QRC_FILES ${CMAKE_CURRENT_BINARY_DIR}/${__RCC_OUTPUT_TARGETS}_big.qrc OPTION ${_RCC_OPTIONS})
+            qt5_add_big_resources(__QRC_FILES ${CMAKE_CURRENT_BINARY_DIR}/${__RCC_OUTPUT_TARGETS}_big.qrc OPTION ${_RCC_OPTIONS})
         else()
-            qt5_add_big_resources(QRC_FILES ${CMAKE_CURRENT_BINARY_DIR}/${__RCC_OUTPUT_TARGETS}_big.qrc)
+            qt5_add_big_resources(__QRC_FILES ${CMAKE_CURRENT_BINARY_DIR}/${__RCC_OUTPUT_TARGETS}_big.qrc)
         endif()
     endif()
     
     # Add resources using standard qt5_add_resources
     if(__RCC_OPTION)
-        qt5_add_resources(QRC_FILES ${__other_rcc_files} OPTION ${_RCC_OPTIONS})
+        qt5_add_resources(__QRC_FILES ${__other_rcc_files} OPTION ${_RCC_OPTIONS})
     else()
-        qt5_add_resources(QRC_FILES ${__other_rcc_files})
+        qt5_add_resources(__QRC_FILES ${__other_rcc_files})
     endif()
     
     # Propagate the modified QRC_FILES variable
-    set(${QRC_FILES} ${${QRC_FILES}} PARENT_SCOPE)
+    if(__is_qrc_files)
+        set(QRC_FILES ${__QRC_FILES})
+        set(${QRC_FILES} ${${QRC_FILES}} PARENT_SCOPE)
+    else()
+        target_sources(${QRC_FILES} PUBLIC ${__QRC_FILES})
+    endif()
 endfunction()
 
 ### Function: qt5_add_big_resources_plus
