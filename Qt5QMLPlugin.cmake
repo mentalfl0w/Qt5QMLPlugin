@@ -1,7 +1,7 @@
 include(CMakeParseArguments)
 
 # Set the current directory where this Qt5QMLPlugin.cmake is located
-set(__qml_plugin_current_dir ${CMAKE_CURRENT_LIST_DIR})
+set(__qml_plugin_current_dir ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Set for Qt5QMLPlugin")
 
 # Control flag to disable generating typeinfo files (if needed)
 set(__qml_plugin_no_generate_typeinfo OFF)
@@ -264,7 +264,11 @@ function(__generate_qrc_file)
     foreach(resourcefile ${__QRC_FILES})
         get_source_file_property(__rscfile_path ${resourcefile} QT_RESOURCE_ALIAS)
         if(${__rscfile_path} STREQUAL "NOTFOUND")
-            get_source_file_property(__rscfile_path ${resourcefile} LOCATION)
+            if(EXISTS ${resourcefile})
+                get_source_file_property(__rscfile_path ${resourcefile} LOCATION)
+            else()
+                set(__rscfile_path ${resourcefile})
+            endif()
             string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_path ${__rscfile_path})
         endif()
         
@@ -272,21 +276,108 @@ function(__generate_qrc_file)
         string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_path ${__rscfile_path})
         string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" __rscfile_absolute_path ${resourcefile})
         string(REPLACE ${__rscfile_full_name} "" __rscfile_relative_dir ${__rscfile_path})
-        
         # Generate a custom command to copy the resource file
-        add_custom_command(
-            OUTPUT ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_path}
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path} ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_path}
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path}
-            COMMENT "Copying ${__rscfile_full_name} to ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}")
-        
+        get_filename_component(__rscfile_ext ${resourcefile} EXT)
+        if(__rscfile_ext STREQUAL ".ts" OR __rscfile_ext STREQUAL ".qm")
+            add_custom_command(
+                OUTPUT ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_path}
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path} ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_path}
+                DEPENDS ${__rscfile_full_name}-generate
+                COMMENT "Copying ${__rscfile_full_name} to ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}")
+        else()
+            add_custom_command(
+                OUTPUT ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_path}
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path} ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_path}
+                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${__rscfile_absolute_path}
+                COMMENT "Copying ${__rscfile_full_name} to ${__QRC_OUTPUT_DIRECTORY}/${__rscfile_relative_dir}")
+        endif()
         # Append file entry to the .qrc content
         string(APPEND __qml_plugin_qrc_content "        <file>${__rscfile_path}</file>\n")
     endforeach()
-    
     # Generate the actual .qrc file using a template
     configure_file(${__qml_plugin_current_dir}/project.qrc.in ${__QRC_OUTPUT_DIRECTORY}/${__QRC_OUTPUT_NAME}.qrc @ONLY)
+endfunction()
+
+function(qt5_create_translation_plus _qm_files)
+    set(options)
+    set(oneValueArgs)
+    set(multiValueArgs OPTIONS)
+
+    cmake_parse_arguments(_LUPDATE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    set(_lupdate_files ${_LUPDATE_UNPARSED_ARGUMENTS})
+    set(_lupdate_options ${_LUPDATE_OPTIONS})
+
+    set(_my_sources)
+    set(_my_tsfiles)
+    foreach(_file ${_lupdate_files})
+        get_filename_component(_ext ${_file} EXT)
+        get_filename_component(_abs_FILE ${_file} ABSOLUTE)
+        if(_ext MATCHES "ts")
+            list(APPEND _my_tsfiles ${_abs_FILE})
+        else()
+            list(APPEND _my_sources ${_abs_FILE})
+        endif()
+    endforeach()
+    foreach(_ts_file ${_my_tsfiles})
+        if(_my_sources)
+          # make a list file to call lupdate on, so we don't make our commands too
+          # long for some systems
+          get_filename_component(_ts_name ${_ts_file} NAME)
+          set(_ts_lst_file "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${_ts_name}_lst_file")
+          set(_lst_file_srcs)
+          foreach(_lst_file_src ${_my_sources})
+              set(_lst_file_srcs "${_lst_file_src}\n${_lst_file_srcs}")
+          endforeach()
+
+          get_directory_property(_inc_DIRS INCLUDE_DIRECTORIES)
+          foreach(_pro_include ${_inc_DIRS})
+              get_filename_component(_abs_include "${_pro_include}" ABSOLUTE)
+              set(_lst_file_srcs "-I${_pro_include}\n${_lst_file_srcs}")
+          endforeach()
+
+          file(WRITE ${_ts_lst_file} "${_lst_file_srcs}")
+        endif()
+        add_custom_target(${_ts_name}-generate
+            COMMAND ${Qt5_LUPDATE_EXECUTABLE} ${_lupdate_options} "@${_ts_lst_file}" -ts ${_ts_file}
+            DEPENDS ${_my_sources}
+            VERBATIM)
+    endforeach()
+    qt5_add_translation_plus(${_qm_files} ${_my_tsfiles})
+    set(${_qm_files} ${${_qm_files}} PARENT_SCOPE)
+endfunction()
+
+function(qt5_add_translation_plus _qm_files)
+    set(options)
+    set(oneValueArgs)
+    set(multiValueArgs OPTIONS)
+
+    cmake_parse_arguments(_LRELEASE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    set(_lrelease_files ${_LRELEASE_UNPARSED_ARGUMENTS})
+
+    foreach(_current_FILE ${_lrelease_files})
+        get_filename_component(_abs_FILE ${_current_FILE} ABSOLUTE)
+        get_filename_component(qm ${_abs_FILE} NAME)
+        get_filename_component(tsfile ${_abs_FILE} NAME)
+        # everything before the last dot has to be considered the file name (including other dots)
+        string(REGEX REPLACE "\\.[^.]*$" "" FILE_NAME ${qm})
+        get_source_file_property(output_location ${_abs_FILE} OUTPUT_LOCATION)
+        if(output_location)
+            file(MAKE_DIRECTORY "${output_location}")
+            set(qm "${output_location}/${FILE_NAME}.qm")
+        else()
+            set(qm "${CMAKE_CURRENT_BINARY_DIR}/${FILE_NAME}.qm")
+        endif()
+
+        add_custom_target(${FILE_NAME}.qm-generate
+            COMMAND ${Qt5_LRELEASE_EXECUTABLE} ${_LRELEASE_OPTIONS} ${_abs_FILE} -qm ${qm}
+            BYPRODUCTS ${qm}
+            DEPENDS ${tsfile}-generate VERBATIM
+        )
+        list(APPEND ${_qm_files} ${qm})
+    endforeach()
+    set(${_qm_files} ${${_qm_files}} PARENT_SCOPE)
 endfunction()
 
 ### Function: qt_add_executable
