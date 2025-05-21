@@ -460,23 +460,32 @@ function(qt5_add_qml_module TARGET)
             set(QMLPLUGIN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         endif()
     endif()
-    
+
     # Set QML import path for Qt Creator compatibility
     cmake_path(SET __qml_plugin_output_dir_parent NORMALIZE ${QMLPLUGIN_OUTPUT_DIRECTORY}/../)
     string(REGEX REPLACE "[/]+$" "" __qml_plugin_output_dir_parent "${__qml_plugin_output_dir_parent}")
+
+    # Update __qml_plugin_qml_import_path (GLOBAL property)
     get_property(__qml_plugin_qml_import_path GLOBAL PROPERTY __qml_plugin_qml_import_path)
-    if(__qml_plugin_qml_import_path)
-        set_property(GLOBAL PROPERTY __qml_plugin_qml_import_path "${__qml_plugin_qml_import_path}:${__qml_plugin_output_dir_parent}")
-    else()
-        set_property(GLOBAL PROPERTY __qml_plugin_qml_import_path "${__qml_plugin_output_dir_parent}")
+
+    if(NOT __qml_plugin_qml_import_path MATCHES "(^|:)${__qml_plugin_output_dir_parent}(:|$)")
+        if(__qml_plugin_qml_import_path)
+            set(__qml_plugin_qml_import_path "${__qml_plugin_qml_import_path}:${__qml_plugin_output_dir_parent}")
+        else()
+            set(__qml_plugin_qml_import_path "${__qml_plugin_output_dir_parent}")
+        endif()
+        set_property(GLOBAL PROPERTY __qml_plugin_qml_import_path "${__qml_plugin_qml_import_path}")
     endif()
-    if(NOT QML_IMPORT_PATH)
-        set(QML_IMPORT_PATH "${__qml_plugin_output_dir_parent}" CACHE STRING "Set for Qt Creator" FORCE)
-    else()
-        set(QML_IMPORT_PATH "${QML_IMPORT_PATH};${__qml_plugin_output_dir_parent}" CACHE STRING "Set for Qt Creator" FORCE)
+
+    # Update QML_IMPORT_PATH (cached variable)
+    if(NOT QML_IMPORT_PATH MATCHES "(^|;)${__qml_plugin_output_dir_parent}($|;)")
+        if(QML_IMPORT_PATH)
+            set(QML_IMPORT_PATH "${QML_IMPORT_PATH};${__qml_plugin_output_dir_parent}" CACHE STRING "Set for Qt Creator" FORCE)
+        else()
+            set(QML_IMPORT_PATH "${__qml_plugin_output_dir_parent}" CACHE STRING "Set for Qt Creator" FORCE)
+        endif()
     endif()
-    get_property(__qml_plugin_qml_import_path GLOBAL PROPERTY __qml_plugin_qml_import_path)
-    
+
     # Determine visibility of sources to public or private
     if(QMLPLUGIN_NO_PUBLIC_SOURCES OR __qml_plugin_no_public_sources)
         set(QMLPLUGIN_NO_PUBLIC_SOURCES ON)
