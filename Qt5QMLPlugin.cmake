@@ -147,8 +147,7 @@ function(qt5_add_resources_plus QRC_FILES RESOURCE_NAME)
     
     # Propagate the modified QRC_FILES variable
     if(__is_qrc_files)
-        set(QRC_FILES ${__QRC_FILES})
-        set(${QRC_FILES} ${${QRC_FILES}} PARENT_SCOPE)
+        set(${QRC_FILES} ${__QRC_FILES} PARENT_SCOPE)
     else()
         target_sources(${QRC_FILES} PUBLIC ${__QRC_FILES})
     endif()
@@ -188,9 +187,9 @@ function(qt5_add_big_resources_plus QRC_FILES)
     
     # Add resources using standard qt5_add_big_resources
     if(__RCC_OPTION)
-        qt5_add_big_resources(QRC_FILES ${__other_rcc_files} OPTION ${_RCC_OPTIONS})
+        qt5_add_big_resources(${QRC_FILES} ${__other_rcc_files} OPTION ${_RCC_OPTIONS})
     else()
-        qt5_add_big_resources(QRC_FILES ${__other_rcc_files})
+        qt5_add_big_resources(${QRC_FILES} ${__other_rcc_files})
     endif()
     
     # Propagate the modified QRC_FILES variable
