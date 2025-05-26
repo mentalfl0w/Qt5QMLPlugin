@@ -654,7 +654,7 @@ function(qt5_add_qml_module TARGET)
         endif()
         
         if (__target_type MATCHES "STATIC_LIBRARY")
-            string(APPEND __qml_plugin_static_register_content "QUrl(\"qrc:${__qml_plugin_qrc_prefix}/${__qmlfile_path}\"),\"${__qml_plugin_uri_name_for_class}\",${QMLPLUGIN_VERSION_MAJOR},${QMLPLUGIN_VERSION_MINOR},\"${__qmlfile_name}\");\n")
+            string(APPEND __qml_plugin_static_register_content "QUrl(\"qrc:${__qml_plugin_qrc_prefix}/${__qmlfile_path}\"),\"${__qml_plugin_uri_name}\",${QMLPLUGIN_VERSION_MAJOR},${QMLPLUGIN_VERSION_MINOR},\"${__qmlfile_name}\");\n")
         endif()
     endforeach()
     
