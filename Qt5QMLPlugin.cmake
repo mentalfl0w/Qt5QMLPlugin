@@ -565,47 +565,51 @@ function(qt5_add_qml_module TARGET)
     # Add sources and QML files to target
     target_sources(${TARGET} ${__qml_plugin_sources_flag} ${QMLPLUGIN_SOURCES} ${QMLPLUGIN_QML_FILES})
     
-    # Handle library shared configurations
-    if (__target_type MATCHES "LIBRARY")
-        add_dependencies(${TARGET} AutoMocHelper)
-        set_target_properties(${TARGET} PROPERTIES AUTOGEN_TARGET_DEPENDS AutoMocHelper)
-        get_target_property(__qml_plugin_build_dir ${TARGET} AUTOGEN_BUILD_DIR)
-        if(${__qml_plugin_build_dir} MATCHES "NOTFOUND")
-            set(__qml_plugin_build_dir "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_autogen")
-        endif()
-        
-        # Generate automoc JSON list file
-        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
-            COMMAND ${CMAKE_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir} > ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
-            DEPENDS AutoMocHelper ${__qml_plugin_build_dir}/timestamp
-            COMMENT "Generating ${TARGET}'s automoc_json_list.txt"
-            COMMAND_EXPAND_LISTS
-            VERBATIM)
-        
-        add_custom_target(${__qml_plugin_uri_name_for_class}-automoc_json_list_generate ALL
-            DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt)
-        
-        # Generate collected type info file
-        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
-            COMMAND ${QT_BIN_DIR}/moc --collect-json  "@${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt" > ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
-            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
-            COMMENT "Generating ${TARGET}'s collected_types.json"
-            COMMAND_EXPAND_LISTS
-            VERBATIM)
-        add_custom_target(${__qml_plugin_uri_name_for_class}-automoc_collect_json_generate ALL
-            DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
-        
-        # Generate type registration C++ file
-        set(__qml_plugin_automoc_type_register_cpp ${CMAKE_CURRENT_BINARY_DIR}/${QMLPLUGIN_PLUGIN_TARGET}_qmltyperegistrations.cpp)
+    # Handle module configurations
+    add_dependencies(${TARGET} AutoMocHelper)
+    set_target_properties(${TARGET} PROPERTIES AUTOGEN_TARGET_DEPENDS AutoMocHelper)
+    get_target_property(__qml_plugin_build_dir ${TARGET} AUTOGEN_BUILD_DIR)
+    if(${__qml_plugin_build_dir} MATCHES "NOTFOUND")
+        set(__qml_plugin_build_dir "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_autogen")
+    endif()
+    
+    # Generate automoc JSON list file
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
+        COMMAND ${CMAKE_BINARY_DIR}/AutoMocHelper ${__qml_plugin_build_dir} > ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
+        DEPENDS AutoMocHelper ${__qml_plugin_build_dir}/timestamp
+        COMMENT "Generating ${TARGET}'s automoc_json_list.txt"
+        COMMAND_EXPAND_LISTS
+        VERBATIM)
+    
+    add_custom_target(${__qml_plugin_uri_name_for_class}-automoc_json_list_generate ALL
+        DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt)
+    
+    # Generate collected type info file
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
+        COMMAND ${QT_BIN_DIR}/moc --collect-json  "@${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt" > ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/automoc_json_list.txt
+        COMMENT "Generating ${TARGET}'s collected_types.json"
+        COMMAND_EXPAND_LISTS
+        VERBATIM)
+    add_custom_target(${__qml_plugin_uri_name_for_class}-automoc_collect_json_generate ALL
+        DEPENDS AutoMocHelper ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
+    
+    # Generate type registration C++ file
+    set(__qml_plugin_automoc_type_register_cpp ${CMAKE_CURRENT_BINARY_DIR}/${QMLPLUGIN_PLUGIN_TARGET}_qmltyperegistrations.cpp)
+    if(__target_type MATCHES "EXECUTABLE")
         add_custom_command(OUTPUT ${__qml_plugin_automoc_type_register_cpp}
             COMMAND ${QMLTYPEREGISTRAR_BIN} --import-name ${__qml_plugin_uri_name} --major-version ${QMLPLUGIN_VERSION_MAJOR} --minor-version ${QMLPLUGIN_VERSION_MINOR} ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json --generate-qmltypes ${CMAKE_CURRENT_BINARY_DIR}/${QMLPLUGIN_TYPEINFO} > ${__qml_plugin_automoc_type_register_cpp}
             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
-        
-        add_custom_target(${__qml_plugin_uri_name_for_class}-automoc_type_register_generate ALL
-            DEPENDS AutoMocHelper ${__qml_plugin_automoc_type_register_cpp})
-        target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
-        set_source_files_properties(${__qml_plugin_automoc_type_register_cpp} PROPERTIES SKIP_AUTOGEN ON)
+    else()
+        add_custom_command(OUTPUT ${__qml_plugin_automoc_type_register_cpp}
+            COMMAND ${QMLTYPEREGISTRAR_BIN} --import-name ${__qml_plugin_uri_name} --major-version ${QMLPLUGIN_VERSION_MAJOR} --minor-version ${QMLPLUGIN_VERSION_MINOR} ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json > ${__qml_plugin_automoc_type_register_cpp}
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/collected_types.json)
     endif()
+    
+    add_custom_target(${__qml_plugin_uri_name_for_class}-automoc_type_register_generate ALL
+        DEPENDS AutoMocHelper ${__qml_plugin_automoc_type_register_cpp})
+    target_sources(${TARGET} PRIVATE ${__qml_plugin_automoc_type_register_cpp})
+    set_source_files_properties(${__qml_plugin_automoc_type_register_cpp} PROPERTIES SKIP_AUTOGEN ON)
     
     # Handle static library specific configurations
     if (__target_type MATCHES "STATIC_LIBRARY")
@@ -700,7 +704,7 @@ function(qt5_add_qml_module TARGET)
     endif()
     
     # Generate QRC file based on target type
-    if (NOT __target_type MATCHES "SHARED_LIBRARY")
+    if (__target_type MATCHES "STATIC_LIBRARY")
         __generate_qrc_file(
             HAS_QMLDIR ON
             OUTPUT_NAME ${__qml_plugin_uri_name_for_class}
